@@ -6,6 +6,8 @@ const User = sequelize.define("User", {
   username: { type: DataTypes.STRING, unique: true, allowNull: false },
   email: { type: DataTypes.STRING, unique: true, allowNull: false },
   password: { type: DataTypes.STRING, allowNull: false },
+  role: {type: DataTypes.STRING, allowNull: true, defaultValue: "User"},
+  last_login: { type: DataTypes.DATE, allowNull: true },
 }, {
   timestamps: true, // This will add createdAt and updatedAt
 });

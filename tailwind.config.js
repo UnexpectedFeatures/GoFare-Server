@@ -1,15 +1,16 @@
 /** @type {import('tailwindcss').Config} */
 export default {
+    darkMode: "class",
     content: [
       "./index.html",
-      "./src/**/*.{js,ts,jsx,tsx}", // Ensure this matches your project structure
+      "./src/**/*.{js,ts,jsx,tsx}", 
     ],
     theme: {
       extend: {
         fontFamily: {
-            archivo: ["Archivo Black", "sans-serif"], // Add Archivo Black
+            archivo: ["Archivo Black", "sans-serif"], 
         },
-      },  // Customize Tailwind here
+      },  
     },
     plugins: [],
   }

@@ -13,22 +13,32 @@ router.post("/register", async (req, res) => {
   try {
     const { username, email, password } = req.body;
 
-    // Ensure username is provided
     if (!username || !email || !password) {
       return res.status(400).json({ message: "All fields are required" });
     }
 
-    // Check if user already exists
-    const existingUser = await User.findOne({ where: { email } });
-    if (existingUser) {
+    const existingEmail = await User.findOne({ where: { email } });
+    if (existingEmail) {
       return res.status(400).json({ message: "Email already in use" });
+    }
+
+    const existingUsername = await User.findOne({ where: { username } });
+    if (existingUsername) {
+      return res.status(400).json({ message: "Username already in use" });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = await User.create({ username, email, password: hashedPassword });
 
-    res.status(201).json({ message: "User created successfully" });
+    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: "1h" });
+
+    res.status(201).json({
+      message: "User created successfully",
+      token,
+      role: user.role,
+    });
   } catch (error) {
+    console.error("Error during registration:", error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -52,11 +62,32 @@ router.post("/login", async (req, res) => {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: "1h" });
-    res.json({ token });
+    // Save the previous last_login before updating
+    const lastLogin = user.last_login ? user.last_login.toISOString() : "First login";
+
+    // Update last_login in the database
+    await User.update(
+      { last_login: new Date() },
+      { where: { email } }
+    );
+
+    const token = jwt.sign(
+      { userId: user.id },
+      process.env.JWT_SECRET,
+      { expiresIn: "1h" }
+    );
+
+    res.json({
+      token,
+      username: user.username,
+      role: user.role,
+      lastLogin, // ✅ Send lastLogin to frontend
+    });
   } catch (error) {
+    console.error("Error during login:", error);
     res.status(500).json({ error: error.message });
   }
 });
+
 
 export default router;
