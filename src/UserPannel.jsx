@@ -3,11 +3,11 @@ import { motion } from "framer-motion";
 import axios from "axios";
 import { formatDistanceToNow } from "date-fns";
 
-
 function UserPanel() {
   const [user, setUser] = useState({ username: "", role: "", email: "", lastLogin: "Never" });
   const [disasterNews, setDisasterNews] = useState([]);
   const [videos, setVideos] = useState([]);
+  const [errorMessage, setErrorMessage] = useState(""); // State to handle error messages for API requests
 
   useEffect(() => {
     const username = localStorage.getItem("username") || "Guest";
@@ -15,14 +15,19 @@ function UserPanel() {
     const email = localStorage.getItem("userEmail") || "Not provided";
     const lastLogin = localStorage.getItem("lastLogin");
 
-    
+    // Check if lastLogin is valid before formatting
+    const formattedLastLogin = lastLogin && !isNaN(new Date(lastLogin))
+      ? formatDistanceToNow(new Date(lastLogin), { addSuffix: true })
+      : "Never";
+
     setUser({
       username,
       role,
       email,
-      lastLogin: lastLogin ? formatDistanceToNow(new Date(lastLogin), { addSuffix: true }) : "Never",
+      lastLogin: formattedLastLogin,
     });
 
+    {/*
     const fetchDisasterNews = async () => {
       try {
         const response = await axios.get("https://data.humdata.org/api/3/action/datastore_search", {
@@ -32,12 +37,13 @@ function UserPanel() {
         if (response.data.success) {
           setDisasterNews(response.data.result.records || []);
         } else {
-          console.error("Error fetching disaster news: API did not return success.");
+          setErrorMessage("Error fetching disaster news: API did not return success.");
         }
       } catch (error) {
-        console.error("Error fetching disaster data:", error);
+        setErrorMessage("Error fetching disaster data: " + error.message);
       }
     };
+    */}
 
     const fetchMedia = () => {
       setVideos([
@@ -46,7 +52,7 @@ function UserPanel() {
       ]);
     };
 
-    fetchDisasterNews();
+    //fetchDisasterNews();
     fetchMedia();
   }, []);
 
@@ -77,6 +83,13 @@ function UserPanel() {
             <p className="text-gray-500">Last Login: {user.lastLogin}</p>
           </div>
         </div>
+
+        {/* Error Message */}
+        {errorMessage && (
+          <div className="mt-6 p-4 bg-red-100 text-red-600 border border-red-300 rounded-lg">
+            <p>{errorMessage}</p>
+          </div>
+        )}
 
         {/* News Section */}
         <div className="mt-6">
@@ -114,7 +127,6 @@ function UserPanel() {
                 ></iframe>
               </div>
             ))}
-            
           </div>
         </div>
       </motion.div>

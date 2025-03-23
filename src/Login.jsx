@@ -10,38 +10,50 @@ function Login() {
     const [username, setUsername] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [errorMessage, setErrorMessage] = useState(""); // Added errorMessage state
     const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setErrorMessage(""); 
         try {
             const endpoint = isLogin ? "login" : "register";
             const payload = isLogin ? { email, password } : { username, email, password };
     
             const res = await axios.post(`http://localhost:5000/api/auth/${endpoint}`, payload);
     
-            console.log("Response:", res.data); // ✅ Debugging: Check response in console
+            console.log("Response:", res.data); 
     
             if (res.data.token) {
+                if (res.data.status === "banned") {
+                    alert("Your account has been banned.");
+                    return;
+                }
+    
                 alert(isLogin ? "Login successful!" : "Signup successful!");
                 localStorage.setItem("userToken", res.data.token);
+                localStorage.setItem("userEmail", email);
                 localStorage.setItem("userRole", res.data.role);
                 localStorage.setItem("username", res.data.username);
-    
-                // ✅ Ensure lastLogin is properly stored
+                localStorage.setItem("userPhone", res.data.phone); 
+                localStorage.setItem("userBirthday", res.data.birthday);
+                localStorage.setItem("userGender", res.data.gender);
+                localStorage.setItem("userHomeAddress", res.data.home_address);
                 localStorage.setItem("lastLogin", res.data.lastLogin);
     
                 setIsLoggedIn(true);
-                navigate("/user-pannel"); 
-            } else {
-                alert("Login failed. Please check your credentials.");
+    
+                if (res.data.role.toLowerCase() === "admin" || res.data.role.toLowerCase() === "moderator") {
+                    navigate("/admin-pannel");
+                } else {
+                    navigate("/user-pannel");
+                }
             }
         } catch (error) {
-            console.error("Error:", error.response?.data); // ✅ Log exact error
+            console.error("Error:", error.response?.data); 
             alert("Error: " + (error.response?.data?.message || "Something went wrong"));
         }
     };
-    
     
     
 
@@ -53,6 +65,17 @@ function Login() {
                         {isLogin ? "Login" : "Sign Up"}
                     </h2>
                 </motion.div>
+
+                {errorMessage && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.5 }}
+                        className="text-red-500 text-center mb-4"
+                    >
+                        {errorMessage}
+                    </motion.div>
+                )}
 
                 <motion.form initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5 }} className="space-y-4">
                     {!isLogin && (

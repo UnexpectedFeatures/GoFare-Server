@@ -81,7 +81,7 @@ function Topbar() {
             </button>
 
             {isMenuOpen && (
-              <div className="absolute right-0 mt-2 w-48 bg-white shadow-lg rounded-md py-2 z-50">
+              <div className="absolute right-0 mt-2 w-48 bg-white shadow-lg rounded-md py-2 z-50 font-sans">
                 {isLoggedIn ? (
                   <>
                     <button 

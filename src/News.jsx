@@ -71,6 +71,7 @@ const DisasterNews = () => {
         throw new Error(`Failed to fetch details for disaster ID ${disasterId}`);
       }
       const data = await response.json();
+      console.log(JSON.stringify(data.data[0]), null, 2);
       return data.data[0]; // Return the full disaster report details
     } catch (error) {
       console.error('Error fetching disaster details:', error);
