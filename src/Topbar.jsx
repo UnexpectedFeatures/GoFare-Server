@@ -13,11 +13,26 @@ function Topbar() {
   const menuRef = useRef(null);
 
   const handleLogout = () => {
+    const lastRole = localStorage.getItem("userRole");
+    
+    console.log("User Role Before Logout:", lastRole);
+  
     localStorage.removeItem("userToken");
+    localStorage.removeItem("userRole");
     setIsLoggedIn(false);
     setIsMenuOpen(false);
-    navigate("/home");
+  
+    setTimeout(() => {
+      if (lastRole?.toLowerCase() === "admin") {
+        console.log("Redirecting to /admin-login"); // Debugging
+        navigate("/admin-login");
+      } else {
+        console.log("Redirecting to /login"); // Debugging
+        navigate("/login");
+      }
+    }, 100); // Small delay ensures localStorage is cleared before navigation
   };
+  
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -36,8 +51,18 @@ function Topbar() {
         <h2 className="text-red-500 text-6xl mr-100 font-archivo"> 
           <span className="text-red-800">SAVE.</span>PH
         </h2>
-
+        
         <ul className="flex gap-10 font-archivo">
+          {isLoggedIn && (
+            <li className="ml-[-90px]">
+            <Link 
+              to="/user-pannel" 
+              className={`hover:text-blue-500 hover:underline transition ${location.pathname === "/user-pannel" ? "text-blue-500 underline" : ""}`}
+            >
+              User
+            </Link>
+          </li>
+          )}
           <li>
             <Link 
               to="/" 
@@ -105,7 +130,7 @@ function Topbar() {
                   </>
                 ) : (
                   <button 
-                    onClick={() => navigate("/home")} 
+                    onClick={() => navigate("/login")} 
                     className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-200 transition"
                   >
                     Login

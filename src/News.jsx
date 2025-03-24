@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-
+import { motion } from "framer-motion";
 //-----------------------------------This is the Dialog/Modal---------------------------------------
 
 const Dialog = ({ isOpen, onClose, content }) => { 
@@ -125,96 +125,102 @@ const DisasterNews = () => {
 
   return (
     <div className="p-4">
-      <div className="container mx-auto p-8">
-        <h1 className="text-5xl font-black text-red-700 mb-8 ml-16">HEADLINES</h1>
-        
-        <div className="flex gap-8 mb-8">
-          {/* Search Section */}
-          <div className="bg-white shadow-gray-800 rounded-2xl p-6 w-full lg:w-1/3 h-fit">
-            <h2 className="text-3xl font-black mb-4">SEARCH</h2>
-            
-            {/* Typhoon Name Input */}
-            <input
-              className="w-full py-2 px-4 mb-4 border border-gray-300 rounded-lg bg-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-500"
-              placeholder="Typhoon Name"
-            />
-            
-            {/* Status Dropdown */}
-            <label className="block text-lg font-semibold text-gray-700 mb-2">Status:</label>
-            <select
-              className="w-full py-2 px-4 mb-4 border border-gray-300 rounded-lg bg-gray-100 focus:outline-none focus:ring-2 focus:ring-red-500"
-              id="statusOption"
-            >
-              <option value="">Select Status</option>
-            </select>
-            
-            {/* Area Dropdown */}
-            <label className="block text-lg font-semibold text-gray-700 mb-2">Area:</label>
-            <select
-              className="w-full py-2 px-4 mb-4 border border-gray-300 rounded-lg bg-gray-100 focus:outline-none focus:ring-2 focus:ring-red-500"
-              id="areaOption"
-            >
-              <option value="">Select Area</option>
-            </select>
-            
-            {/* Disaster Type Dropdown */}
-            <label className="block text-lg font-semibold text-gray-700 mb-2">Disaster Type:</label>
-            <select
-              className="w-full py-2 px-4 mb-4 border border-gray-300 rounded-lg bg-gray-100 focus:outline-none focus:ring-2 focus:ring-red-500"
-              id="disasterOption"
-            >
-              <option value="">Select Disaster Type</option>
-            </select>
-            
-            {/* Date Dropdown */}
-            <label className="block text-lg font-semibold text-gray-700 mb-2">Date:</label>
-            <select
-              className="w-full py-2 px-4 mb-4 border border-gray-300 rounded-lg bg-gray-100 focus:outline-none focus:ring-2 focus:ring-red-500"
-              id="dateOption"
-            >
-              <option value="">Select Date</option>
-            </select>
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <div className="container mx-auto p-8">
+          <h1 className="text-5xl font-black text-red-700 mb-8 ml-16">HEADLINES</h1>
+          
+          <div className="flex gap-8 mb-8">
+            {/* Search Section */}
+            <div className="bg-white shadow-gray-800 rounded-2xl p-6 w-full lg:w-1/3 h-fit">
+              <h2 className="text-3xl font-black mb-4">SEARCH</h2>
+              
+              {/* Typhoon Name Input */}
+              <input
+                className="w-full py-2 px-4 mb-4 border border-gray-300 rounded-lg bg-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-500"
+                placeholder="Typhoon Name"
+              />
+              
+              {/* Status Dropdown */}
+              <label className="block text-lg font-semibold text-gray-700 mb-2">Status:</label>
+              <select
+                className="w-full py-2 px-4 mb-4 border border-gray-300 rounded-lg bg-gray-100 focus:outline-none focus:ring-2 focus:ring-red-500"
+                id="statusOption"
+              >
+                <option value="">Select Status</option>
+              </select>
+              
+              {/* Area Dropdown */}
+              <label className="block text-lg font-semibold text-gray-700 mb-2">Area:</label>
+              <select
+                className="w-full py-2 px-4 mb-4 border border-gray-300 rounded-lg bg-gray-100 focus:outline-none focus:ring-2 focus:ring-red-500"
+                id="areaOption"
+              >
+                <option value="">Select Area</option>
+              </select>
+              
+              {/* Disaster Type Dropdown */}
+              <label className="block text-lg font-semibold text-gray-700 mb-2">Disaster Type:</label>
+              <select
+                className="w-full py-2 px-4 mb-4 border border-gray-300 rounded-lg bg-gray-100 focus:outline-none focus:ring-2 focus:ring-red-500"
+                id="disasterOption"
+              >
+                <option value="">Select Disaster Type</option>
+              </select>
+              
+              {/* Date Dropdown */}
+              <label className="block text-lg font-semibold text-gray-700 mb-2">Date:</label>
+              <select
+                className="w-full py-2 px-4 mb-4 border border-gray-300 rounded-lg bg-gray-100 focus:outline-none focus:ring-2 focus:ring-red-500"
+                id="dateOption"
+              >
+                <option value="">Select Date</option>
+              </select>
+            </div>
+
+            {/* Disaster News List */}
+            <div className="w-full lg:w-2/3 bg-white rounded-2xl p-4">
+              <h1 className="text-3xl font-semibold mb-3 text-center text-gray-600">Disaster News in the Philippines</h1>
+
+              <ul>
+                {disasters.map((disaster) => (
+                  <li key={disaster.id} className="mb-10 p-4 bg-white rounded-lg shadow-gray-600 shadow-md hover:shadow-lg transition">
+                    <h3 className="text-xl font-bold text-gray-800">{disaster.fields.title}</h3>
+                    
+                    {/* Check if disaster_type exists and is an array within fields */}
+                    <p className="text-sm text-gray-700">
+                      <strong>Status:</strong> 
+                      {disaster.disaster_type && disaster.disaster_type.length > 0 
+                        ? disaster.disaster_type.map((type, index) => (
+                            <span key={index}>{type.name}{index < disaster.disaster_type.length - 1 && ', '}</span>
+                          )) 
+                        : 'N/A'}
+                    </p>
+
+                    <p className="text-sm text-gray-700"><strong>Status:</strong> {disaster.fields.status || 'N/A'}</p>
+                    <p className="text-sm text-gray-700"><strong>Source:</strong> {disaster.fields.source || 'N/A'}</p>
+                    <p className="text-sm text-gray-700"><strong>Date:</strong> {disaster.fields.include || 'N/A'}</p>
+
+                    {/* Button to fetch and view the full report details */}
+                    <button
+                      onClick={() => handleViewFullReport(disaster.id)}
+                      className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg cursor-pointer hover:bg-blue-500 transition"
+                    >
+                      View Full Report
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
-
-          {/* Disaster News List */}
-          <div className="w-full lg:w-2/3 bg-white rounded-2xl p-4">
-            <h1 className="text-3xl font-semibold mb-3 text-center text-gray-600">Disaster News in the Philippines</h1>
-
-            <ul>
-              {disasters.map((disaster) => (
-                <li key={disaster.id} className="mb-10 p-4 bg-white rounded-lg shadow-gray-600 shadow-md hover:shadow-lg transition">
-                  <h3 className="text-xl font-bold text-gray-800">{disaster.fields.title}</h3>
-                  
-                  {/* Check if disaster_type exists and is an array within fields */}
-                  <p className="text-sm text-gray-700">
-                    <strong>Status:</strong> 
-                    {disaster.disaster_type && disaster.disaster_type.length > 0 
-                      ? disaster.disaster_type.map((type, index) => (
-                          <span key={index}>{type.name}{index < disaster.disaster_type.length - 1 && ', '}</span>
-                        )) 
-                      : 'N/A'}
-                  </p>
-
-                  <p className="text-sm text-gray-700"><strong>Status:</strong> {disaster.fields.status || 'N/A'}</p>
-                  <p className="text-sm text-gray-700"><strong>Source:</strong> {disaster.fields.source || 'N/A'}</p>
-                  <p className="text-sm text-gray-700"><strong>Date:</strong> {disaster.fields.include || 'N/A'}</p>
-
-                  {/* Button to fetch and view the full report details */}
-                  <button
-                    onClick={() => handleViewFullReport(disaster.id)}
-                    className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition"
-                  >
-                    View Full Report
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
+          
+          {/* Dialog to show disaster details */}
+          <Dialog isOpen={isDialogOpen} onClose={handleDialogClose} content={dialogContent} />
         </div>
-        
-        {/* Dialog to show disaster details */}
-        <Dialog isOpen={isDialogOpen} onClose={handleDialogClose} content={dialogContent} />
-      </div>
+      </motion.div>
     </div>
   );
 };

@@ -7,6 +7,8 @@ import Topbar from "./Topbar";
 import Footer from "./Footer";
 import Login from "./Login";
 import News from "./News";
+import Home from "./Home";
+import AdminLogin from "./AdminLogin";
 import UserPannel from "./UserPannel";
 import { useContext } from "react";
 import { AuthContext } from "./AuthContext";
@@ -25,7 +27,9 @@ function App() {
               <main className="flex-grow"> 
                 <Routes>
                     <Route path="/" element={<Navigate to="/home" />} />
-                    <Route path="/home" element={<ProtectedLogin />} />
+                    <Route path="/home" element={<Home />} /> 
+                    <Route path="/admin-login" element={<AdminLogin />} />
+                    <Route path="/login" element={<ProtectedLogin />} />
                     <Route path="/setting" element={<Setting />} />
                     <Route path="/profile" element={<Profile />} />
                     <Route path="/news" element={<News />} />
@@ -51,9 +55,7 @@ const ProtectedLogin = () => {
     return <Login />;
   }
 
-  return userRole === "admin" || userRole === "moderator" 
-    ? <Navigate to="/admin-pannel" /> 
-    : <Navigate to="/user-pannel" />;
+  <Navigate to="/user-pannel" />;
 };
 
 
@@ -62,7 +64,7 @@ const ProtectedRoute = ({ component: Component, adminOnly = false }) => {
   const userRole = localStorage.getItem("userRole")?.toLowerCase(); // Ensure case-insensitive check
 
   if (!isLoggedIn) {
-    return <Navigate to="/home" />;
+    return <Navigate to="/login" />;
   }
 
   if (adminOnly && (userRole !== "admin" && userRole !== "moderator")) {

@@ -2,23 +2,42 @@ import { useTheme } from "./ThemeContext.jsx";
 import { Link } from "react-router-dom";
 
 function Footer() {
-    const { darkMode } = useTheme();
-    
     return (
-        <div className="mt-auto bg-gray-900 text-white py-6">
-            <footer className="container mx-auto text-center px-4">
-                <h2 className="text-2xl font-bold">SAVE.PH</h2>
-                <p className="text-sm mt-2 opacity-80">Your trusted platform for disaster risk awareness and response.</p>
-                
-                <div className="flex justify-center space-x-6 mt-4">
-                    <Link to="/about" className="hover:text-blue-400 transition">About</Link>
-                    <Link to="/news" className="hover:text-blue-400 transition">News</Link>
-                </div>
-
-                <p className="text-xs mt-6 opacity-50">&copy; {new Date().getFullYear()} SAVE.PH. All rights reserved.</p>
-            </footer>
+      <footer className="bg-gray-900 text-white py-8 px-6">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 text-sm">
+          {/* SAVE.PH Description */}
+          <div>
+            <h2 className="text-lg font-bold">SAVE.PH</h2>
+            <p className="mt-2 text-gray-400">
+              Dedicated to providing life-saving information and resources to help Filipinos prepare for and respond to natural disasters.
+            </p>
+          </div>
+  
+          {/* Quick Links */}
+          <div>
+            <h3 className="text-lg font-bold">Quick Links</h3>
+            <ul className="mt-2 space-y-2">
+              <li><Link to="/about" className="text-gray-400 hover:text-white">About Us</Link></li>
+              <li><Link to="/home" className="text-gray-400 hover:text-white">Safety Resources</Link></li>
+              <li><Link to="/contact" className="text-gray-400 hover:text-white">Contact Us</Link></li>
+            </ul>
+          </div>
+  
+          {/* Subscription Section */}
+          <div>
+            <h3 className="text-lg font-bold">Connect With Us</h3>
+            <p className="mt-2 text-gray-400"><Link to="/login" className="text-blue-500 cursor-pointer hover:text-blue-700">Sign-up</Link> to receive disaster alerts and updates.</p>
+            
+          </div>
         </div>
+  
+        {/* Copyright Section */}
+        <div className="text-center text-gray-500 text-xs mt-6 border-t border-gray-700 pt-4">
+          © 2023 SAVE.PH. All rights reserved.
+        </div>
+      </footer>
     );
-}
-
-export default Footer;
+  };
+  
+  export default Footer;
+  

@@ -42,12 +42,8 @@ function Login() {
                 localStorage.setItem("lastLogin", res.data.lastLogin);
     
                 setIsLoggedIn(true);
-    
-                if (res.data.role.toLowerCase() === "admin" || res.data.role.toLowerCase() === "moderator") {
-                    navigate("/admin-pannel");
-                } else {
-                    navigate("/user-pannel");
-                }
+                navigate("/user-pannel");
+                
             }
         } catch (error) {
             console.error("Error:", error.response?.data); 
