@@ -7,14 +7,13 @@ import { AuthContext } from "./AuthContext.jsx";
 function Topbar() {
   const { darkMode, setDarkMode } = useTheme();
   const navigate = useNavigate();
-  const location = useLocation(); // 🔹 Get current path
+  const location = useLocation();
   const { isLoggedIn, setIsLoggedIn } = useContext(AuthContext);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef(null);
-
   const handleLogout = () => {
     const lastRole = localStorage.getItem("userRole");
-    
+
     console.log("User Role Before Logout:", lastRole);
   
     localStorage.removeItem("userToken");
@@ -23,14 +22,9 @@ function Topbar() {
     setIsMenuOpen(false);
   
     setTimeout(() => {
-      if (lastRole?.toLowerCase() === "admin") {
-        console.log("Redirecting to /admin-login"); // Debugging
-        navigate("/admin-login");
-      } else {
-        console.log("Redirecting to /login"); // Debugging
-        navigate("/login");
-      }
-    }, 100); // Small delay ensures localStorage is cleared before navigation
+      console.log("Redirecting to /login"); 
+      navigate("/login");
+    }, 100); // Delay
   };
   
 

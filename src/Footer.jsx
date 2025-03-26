@@ -1,10 +1,15 @@
 import { useTheme } from "./ThemeContext.jsx";
 import { Link } from "react-router-dom";
+import { useContext } from "react";
+import { AuthContext } from "./AuthContext.jsx";
 
 function Footer() {
+  const { isLoggedIn } = useContext(AuthContext);
+  
     return (
-      <footer className="bg-gray-900 text-white py-8 px-6">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 text-sm">
+      <footer className="bg-gray-900 text-white py-8 px-6 ">
+        <hr className="text-gray-700"></hr>
+        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 text-sm mt-5">
           {/* SAVE.PH Description */}
           <div>
             <h2 className="text-lg font-bold">SAVE.PH</h2>
@@ -26,8 +31,16 @@ function Footer() {
           {/* Subscription Section */}
           <div>
             <h3 className="text-lg font-bold">Connect With Us</h3>
-            <p className="mt-2 text-gray-400"><Link to="/login" className="text-blue-500 cursor-pointer hover:text-blue-700">Sign-up</Link> to receive disaster alerts and updates.</p>
-            
+            <p className="mt-2 text-gray-400">
+              <Link 
+                to={isLoggedIn ? "#" : "/login"} // Prevent navigation if logged in
+                className={`text-blue-500 cursor-pointer hover:text-blue-700 ${isLoggedIn ? "pointer-events-none text-gray-400" : ""}`}
+              >
+                Sign-up
+              </Link> 
+              { " " } 
+              to receive disaster alerts and updates.
+            </p>
           </div>
         </div>
   

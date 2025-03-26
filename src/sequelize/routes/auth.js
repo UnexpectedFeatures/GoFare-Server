@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 import dotenv from "dotenv";
+import Event from "../models/Event.js";
 import db from "../db.js";
 
 
@@ -75,7 +76,7 @@ router.post("/login", async (req, res) => {
       process.env.JWT_SECRET,
       { expiresIn: "1h" }
     );
-
+    
     res.json({
       token,
       username: user.username,
@@ -90,13 +91,38 @@ router.post("/login", async (req, res) => {
 });
 
 //For Admin where it Select all the 'Users'
-router.get("/users", async (req, res) => {
+
+router.get("/users/:roles", async (req, res) => {
   try {
+    let roles = req.params.roles.toLowerCase();
+    
+    if (roles !== "admin" && roles !== "moderator") {
+      return res.status(403).json({ error: "Access denied" });
+    }
     const users = await User.findAll({
-      attributes: ["username", "email", "createdAt", "updatedAt", "status", "last_login", "role"], // Include role
-      where: {
-        role: ["user"], // Exclude admin and moderator
-      },
+      attributes: ["username", "email", "createdAt", "updatedAt", "status", "last_login", "role"],
+      where: { role: "user" },
+    });
+
+    res.json(users);
+  } catch (error) {
+    console.error("Error fetching users:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// This is only for Highest Admin
+router.get("/mods/:roles", async (req, res) => {
+  try {
+    let roles = req.params.roles.toLowerCase();
+    
+    if (roles !== "admin") {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
+    const users = await User.findAll({
+      attributes: ["username", "email", "createdAt", "updatedAt", "status", "last_login", "role"],
+      where: { role: "moderator" },
     });
 
     res.json(users);
@@ -196,6 +222,35 @@ router.patch('/updateUser/:email', async (req, res) => {
   } catch (error) {
     console.error("Error occurred during update:", error);
     res.status(500).json({ message: "An error occurred while updating user information." });
+  }
+});
+
+router.post("/create-mod", async (req, res) => {
+  try {
+    const { username, email, password } = req.body;
+
+    if (!username || !email || !password) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    const existingEmail = await User.findOne({ where: { email } });
+    if (existingEmail) {
+      return res.status(400).json({ message: "Email already in use" });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const user = await User.create({ username, email, password: hashedPassword });
+
+    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: "1h" });
+
+    res.status(201).json({
+      message: "User created successfully",
+      token,
+      role: "moderator",
+    });
+  } catch (error) {
+    console.error("Error during registration:", error);
+    res.status(500).json({ error: error.message });
   }
 });
 

@@ -2,15 +2,17 @@ import { useNavigate } from "react-router-dom";
 import { useState, useContext } from "react";
 import { motion } from "framer-motion";
 import axios from "axios";
-import { AuthContext } from "./AuthContext";  // ✅ Import AuthContext
+import { Eye, EyeOff } from "lucide-react"; // Icons for show/hide
+import { AuthContext } from "./AuthContext";  
 
 function Login() {
-    const { setIsLoggedIn } = useContext(AuthContext); // ✅ Use AuthContext
+    const { setIsLoggedIn } = useContext(AuthContext);
     const [isLogin, setIsLogin] = useState(true);
     const [username, setUsername] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
-    const [errorMessage, setErrorMessage] = useState(""); // Added errorMessage state
+    const [showPassword, setShowPassword] = useState(false); // Toggle state for password visibility
+    const [errorMessage, setErrorMessage] = useState(""); 
     const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
@@ -29,7 +31,11 @@ function Login() {
                     alert("Your account has been banned.");
                     return;
                 }
-    
+                if (res.data.role.toLowerCase() !== "user") {
+                    alert("User not found");
+                    return;
+                }
+
                 alert(isLogin ? "Login successful!" : "Signup successful!");
                 localStorage.setItem("userToken", res.data.token);
                 localStorage.setItem("userEmail", email);
@@ -51,8 +57,6 @@ function Login() {
         }
     };
     
-    
-
     return (
         <div className="h-[calc(100vh-100px)] flex items-center justify-center bg-gray-100">
             <div className="relative w-96 p-8 bg-white shadow-lg rounded-lg">
@@ -100,17 +104,39 @@ function Login() {
                         />
                     </div>
 
-                    <div>
+                    <div className="relative">
                         <label className="block text-gray-700">Password</label>
-                        <input
-                            type="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
-                            placeholder="Enter your password"
-                            required
-                        />
+                        <div className="relative">
+                            <input
+                                type={showPassword ? "text" : "password"}
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 pr-10"
+                                placeholder="Enter your password"
+                                required
+                            />
+                            <button 
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute inset-y-0 right-2 flex items-center text-gray-600"
+                            >
+                                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                            </button>
+                        </div>
                     </div>
+
+                    {isLogin && (
+                        <div className="text-center mt-2">
+                            <button 
+                                type="button"
+                                className="text-blue-500 text-sm underline hover:text-blue-700 transition"
+                                onClick={() => navigate("/forgot-password")}
+                            >
+                                Forgot password?
+                            </button>
+                        </div>
+                    
+                    )}
 
                     <button
                         onClick={handleSubmit}

@@ -28,7 +28,7 @@ function AdminLogin() {
                     alert("Login successful!");
                     localStorage.setItem("userToken", res.data.token);
                     localStorage.setItem("userEmail", email);
-                    localStorage.setItem("userRole", res.data.role);
+                    localStorage.setItem("userRole", res.data.role.toLowerCase());
                     localStorage.setItem("username", res.data.username);
                     localStorage.setItem("lastLogin", res.data.lastLogin);
                     
