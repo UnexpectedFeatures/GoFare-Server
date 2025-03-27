@@ -6,6 +6,8 @@ import Profile from "./Profile";
 import Topbar from "./Topbar";
 import Footer from "./Footer";
 import Login from "./Login";
+import ForgotPassword from "./ForgotPassword";
+import ResetPassword from "./ResetPassword";
 import News from "./News";
 import Home from "./Home";
 import AdminLogin from "./AdminLogin";
@@ -20,11 +22,13 @@ import EventPannel from './EventPannel';
 import CreateMod from './CreateMod';
 import UserList from "./UserList";
 import EventList from './EventList';
+import BanRequest from "./BanRequest";
+import AccountAppeal from "./AccountAppeal";
 function Layout() {
   const location = useLocation();
 
   // Define all admin-related routes
-  const adminRoutes = ["/admin-pannel", "/user-list", "/mod-list", "/event-pannel", "/event-list", "/create-mod"];
+  const adminRoutes = ["/admin-pannel", "/appeal", "/user-list", "/mod-list", "/event-pannel", "/event-list", "/create-mod"];
 
   // Check if the current route is in the admin section but NOT admin-login
   const isAdminSection = adminRoutes.includes(location.pathname);
@@ -44,12 +48,16 @@ function Layout() {
           <Route path="/home" element={<Home />} />
           <Route path="/admin-login" element={<ProtectedAdminLogin />} />
           <Route path="/login" element={<ProtectedLogin />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/setting" element={<Setting />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/news" element={<News />} />
           <Route path="/user-list" element={<UserList />} />
+          <Route path="/appeal" element={<AccountAppeal />} />
           <Route path="/mod-list" element={<ModList />} />
           <Route path="/event-pannel" element={<EventPannel />} />
+          <Route path="/ban-request" element={<BanRequest />} />
           <Route path="/event-list" element={<EventList />} />
           <Route path="/create-mod" element={<CreateMod />} />
           <Route path="/user-pannel" element={<ProtectedRoute component={UserPannel} />} />

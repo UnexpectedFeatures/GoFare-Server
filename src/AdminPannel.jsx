@@ -1,96 +1,78 @@
-import React, { useEffect, useState, useContext } from "react";
-import axios from "axios";
+import React, { useEffect, useState } from "react";
+import { motion } from "framer-motion";
+import { formatDistanceToNow } from "date-fns";
 
-function AdminPanel() {
-    const [users, setUsers] = useState([]);
-    const [ isNavOpen ] = useState(false);
+function AdminPannel() {
+  const [user, setUser] = useState({
+    username: "",
+    role: "",
+    email: "",
+    lastLogin: "Never",
+  });
+  const [errorMessage, setErrorMessage] = useState(""); // Define errorMessage state
 
-    useEffect(() => {
-        const fetchUsers = async () => {
-            try {
-                const role = localStorage.getItem("userRole")?.toLowerCase();
-                console.log("Fetching users with role:", role);
+  useEffect(() => {
+    try {
+      const username = localStorage.getItem("username") || "Guest";
+      const role = localStorage.getItem("userRole") || "Unknown";
+      const email = localStorage.getItem("userEmail") || "Not provided";
+      const lastLogin = localStorage.getItem("lastLogin");
 
-                const response = await axios.get(`http://localhost:5000/api/auth/users/${role}`);
-                console.log("Fetched users from API:", response.data);
-                setUsers(response.data);
-            } catch (error) {
-                console.error("Error fetching users:", error);
-            }
-        };
-        fetchUsers();
-    }, []);
+      // Check if lastLogin is valid before formatting
+      const formattedLastLogin =
+        lastLogin && !isNaN(new Date(lastLogin))
+          ? formatDistanceToNow(new Date(lastLogin), { addSuffix: true })
+          : "Never";
 
-    // Handle Ban/Unban
-    const handleBan = async (userEmail, isBanned) => {
-        try {
-            const endpoint = isBanned
-                ? `http://localhost:5000/api/auth/users/unban/${userEmail}`
-                : `http://localhost:5000/api/auth/users/ban/${userEmail}`;
+      setUser({
+        username,
+        role,
+        email,
+        lastLogin: formattedLastLogin,
+      });
+    } catch (error) {
+      setErrorMessage("Failed to retrieve user data.");
+      console.error("Error retrieving user data from localStorage:", error);
+    }
+  }, []);
 
-            await axios.post(endpoint);
-            
-            setUsers(users.map(user =>
-                user.email === userEmail ? { ...user, status: isBanned ? "active" : "banned" } : user
-            ));
-        } catch (error) {
-            console.error("Error banning/unbanning user:", error);
-        }
-    };
-
-    return (
-        <div className="flex min-h-screen bg-gray-100">
-            {/* Main Content */}
-            <div className={`transition-all duration-300 flex-1 p-6 ${isNavOpen ? "ml-64" : "ml-16"}`}>
-                <div className="bg-white shadow-lg rounded-lg p-6 max-w-6xl mx-auto">
-                    <h1 className="text-2xl font-bold text-gray-800 mb-4">Admin Panel - User Management</h1>
-                    <div className="overflow-x-auto">
-                        <table className="min-w-full bg-white border border-gray-300">
-                            <thead>
-                                <tr className="bg-gray-200">
-                                    <th className="py-2 px-4 border">ID</th>
-                                    <th className="py-2 px-4 border">User</th>
-                                    <th className="py-2 px-4 border">Email</th>
-                                    <th className="py-2 px-4 border">Created At</th>
-                                    <th className="py-2 px-4 border">Updated At</th>
-                                    <th className="py-2 px-4 border">Status</th>
-                                    <th className="py-2 px-4 border">Last Login</th>
-                                    <th className="py-2 px-4 border">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {users.length > 0 ? (
-                                    users.map((user, index) => (
-                                        <tr key={user.email || index} className="border-t">
-                                            <td className="py-2 px-4 border">{index + 1}</td>
-                                            <td className="py-2 px-4 border">{user.username}</td>
-                                            <td className="py-2 px-4 border">{user.email}</td>
-                                            <td className="py-2 px-4 border">{user.createdAt}</td>
-                                            <td className="py-2 px-4 border">{user.updatedAt}</td>
-                                            <td className="py-2 px-4 border">{user.status}</td>
-                                            <td className="py-2 px-4 border">{user.last_login || "Never logged in"}</td>
-                                            <td className="py-2 px-4 border">
-                                                <button
-                                                    className={`px-4 py-1 rounded cursor-pointer ${user.status === "banned" ? "bg-green-500" : "bg-red-500"} text-white`}
-                                                    onClick={() => handleBan(user.email, user.status === "banned")}
-                                                >
-                                                    {user.status === "banned" ? "Unban" : "Ban"}
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))
-                                ) : (
-                                    <tr>
-                                        <td colSpan="8" className="text-center py-4 text-gray-500">No users found.</td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
+  return (
+    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-6 w-full">
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="bg-white shadow-xl rounded-lg p-6 w-full max-w-4xl mx-auto"
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between border-b pb-4">
+          <h1 className="text-2xl font-bold text-red-600">Disaster Risk Dashboard</h1>
         </div>
-    );
+
+        {/* User Info */}
+        <div className="mt-4 flex items-center space-x-4">
+          <div className="w-16 h-16 bg-gray-300 rounded-full flex items-center justify-center">
+            <span className="text-gray-600 text-xl font-bold">
+              {user.username.charAt(0).toUpperCase()}
+            </span>
+          </div>
+          <div>
+            <h2 className="text-xl font-semibold">{user.username}</h2>
+            <p className="text-gray-500">Role: {user.role}</p>
+            <p className="text-gray-500">Email: {user.email}</p>
+            <p className="text-gray-500">Last Login: {user.lastLogin}</p>
+          </div>
+        </div>
+
+        {/* Error Message */}
+        {errorMessage && (
+          <div className="mt-6 p-4 bg-red-100 text-red-600 border border-red-300 rounded-lg">
+            <p>{errorMessage}</p>
+          </div>
+        )}
+      </motion.div>
+    </div>
+  );
 }
 
-export default AdminPanel;
+export default AdminPannel;

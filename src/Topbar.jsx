@@ -68,7 +68,7 @@ function Topbar() {
           <li>
             <Link 
               to="/news" 
-              className={`hover:text-blue-500 hover:underline transition ${location.pathname === "/news" ? "text-blue-500 underline" : ""}`}
+              className={`${darkMode ? "text-white" : "text-black"}hover:text-blue-500 hover:underline transition ${location.pathname === "/news" ? "text-blue-500 underline" : ""}`}
             >
               News
             </Link>

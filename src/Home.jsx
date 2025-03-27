@@ -150,46 +150,56 @@ function Home() {
         ))}
       </div>
 
-      {/* Events Section */}<div className="container mx-auto px-4 py-8">
-  <h2 className="text-2xl font-bold text-center mb-6">Upcoming Events</h2>
+      {/* Events Section */}
 
-{events.length === 0 ? (
-  <div className="bg-white p-6 rounded-lg shadow-md text-center">
-    <p className="text-gray-500">No events available.</p>
-  </div>
-) : (
-  <div className="flex flex-col items-center space-y-6">
-    {events.map((event) => (
-      <div key={event.id} className="bg-white rounded-lg shadow-md overflow-hidden w-full max-w-md ">
-        
-        {/* Image Container */}
-        {event.image && (
-          <div className="w-full h-40 flex justify-center items-center bg-gray-200">
-            <img 
-              src={`http://localhost:5000${event.image}`} 
-              alt={event.title} 
-              className="w-full h-full"
-            />
+      <div className="container mx-auto px-4 py-8">
+        <h2 className="text-2xl font-bold text-center mb-6">Upcoming Events</h2>
+
+        {events.length === 0 ? (
+          <div className="bg-white p-6 rounded-lg shadow-md text-center">
+            <p className="text-gray-500">No events available.</p>
+          </div>
+        ) : (
+          <div className="flex flex-wrap justify-center gap-6">
+            {events.map((event) => (
+              <div key={event.id} className="bg-gray-50 rounded-lg shadow-lg overflow-hidden w-full sm:w-80 md:w-96 lg:w-2/5 flex flex-col relative">
+
+                {/* Image Container */}
+                {event.image && (
+                  <div className="w-full h-40 bg-gray-200 flex justify-center items-center overflow-hidden">
+                    <img 
+                      src={`http://localhost:5000${event.image}`} 
+                      alt={event.title} 
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                )}
+
+                {/* Info Container */}
+                <div className="p-4 bg-gray-50 flex-1">
+                  {/* Location at Top */}
+                  {event.location && (
+                    <div className="text-sm text-gray-500 mb-2">
+                      <strong>Location:</strong> {event.location}
+                    </div>
+                  )}
+
+                  <h3 className="text-lg font-semibold text-gray-800">{event.title}</h3>
+                  <p className="text-sm text-gray-600">
+                    {new Date(event.date).toLocaleDateString("en-US", { 
+                      year: "numeric", 
+                      month: "long", 
+                      day: "numeric" 
+                    })}
+                  </p>
+                  <p className="mt-2 text-gray-700">{event.description}</p>
+                </div>
+              </div>
+            ))}
           </div>
         )}
-
-        {/* Info Container */}
-        <div className="p-4 text-center bg-gray-50">
-          <h3 className="text-lg font-semibold">{event.title}</h3>
-          <p className="text-sm text-gray-600">
-            {new Date(event.date).toLocaleDateString("en-US", { 
-              year: "numeric", 
-              month: "long", 
-              day: "numeric" 
-            })}
-          </p>
-          <p className="mt-2 text-gray-700">{event.description}</p>
-        </div>
       </div>
-    ))}
-  </div>
-)}
-</div>
+
 
 
 

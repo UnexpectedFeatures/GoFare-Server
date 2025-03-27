@@ -41,24 +41,38 @@ const upload = multer({
 // ✅ Create Event Route
 router.post("/createEvent", upload.single("image"), async (req, res) => {
     try {
+        // Check if the required fields exist
+        const { title, description, location, date, startTime, endTime } = req.body;
+        
+        // Check if any required fields are missing
+        if (!title || !description || !location || !date || !startTime || !endTime) {
+            return res.status(400).json({ error: "All fields (title, description, date, startTime, endTime) are required" });
+        }
+
+        // Handle file upload
         if (!req.file) {
             console.log("❌ No file received.");
             return res.status(400).json({ error: "No image uploaded" });
         }
 
-        const { title, description, date } = req.body;
+        // Generate the image path for saving
         const imagePath = `/uploads/${req.file.filename}`;
 
         console.log("✅ Uploaded File:", req.file);
         console.log("📁 File stored at:", path.resolve(req.file.path));
 
+        // Create the event in the database
         const event = await Event.create({
             title,
             description,
+            location,
             date,
+            startTime,
+            endTime,
             image: imagePath
         });
 
+        // Send the response with the created event data
         res.status(201).json(event);
     } catch (error) {
         console.error("❌ Error creating event:", error);

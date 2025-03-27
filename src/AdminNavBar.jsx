@@ -82,6 +82,13 @@ function AdminTopBar() {
                             </button>
                         </Link>
                     )}
+                    
+                    
+                    <Link to="/appeal" className="w-full">
+                        <button className="w-full cursor-pointer px-4 py-2 text-left hover:bg-gray-700">
+                            🔸 {isNavOpen && "Account Appeal"}
+                        </button>
+                    </Link>
 
                     <Link to="/user-list" className="w-full">
                         <button className="w-full cursor-pointer px-4 py-2 text-left hover:bg-gray-700">

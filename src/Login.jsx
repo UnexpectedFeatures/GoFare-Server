@@ -28,7 +28,8 @@ function Login() {
     
             if (res.data.token) {
                 if (res.data.status === "banned") {
-                    alert("Your account has been banned.");
+                    // Redirect to BanRequest page instead of alerting
+                    navigate("/ban-request");
                     return;
                 }
                 if (res.data.role.toLowerCase() !== "user") {
@@ -135,7 +136,6 @@ function Login() {
                                 Forgot password?
                             </button>
                         </div>
-                    
                     )}
 
                     <button

@@ -1,11 +1,14 @@
 import { useState } from "react";
 
-export default function CreateEvent() {
+export default function EventPannel() {
     const [eventData, setEventData] = useState({
         title: "",
         description: "",
         date: "",
-        image: null
+        startTime: "",
+        endTime: "",
+        image: null,
+        location: "" // Change location to a string
     });
 
     const handleChange = (e) => {
@@ -15,9 +18,7 @@ export default function CreateEvent() {
 
     const handleImageChange = (e) => {
         const file = e.target.files[0];
-    
         if (file) {
-            e.target.value = ""; // Reset input to allow re-selecting the same file
             setEventData((prev) => ({ ...prev, image: file }));
         }
     };
@@ -29,10 +30,13 @@ export default function CreateEvent() {
         formData.append("title", eventData.title);
         formData.append("description", eventData.description);
         formData.append("date", eventData.date);
+        formData.append("startTime", eventData.startTime);
+        formData.append("endTime", eventData.endTime);
+        formData.append("location", eventData.location); // Send location as a string
         if (eventData.image) {
             formData.append("image", eventData.image);
         }
-    
+
         try {
             const response = await fetch("http://localhost:5000/api/events/createEvent", {
                 method: "POST",
@@ -41,7 +45,15 @@ export default function CreateEvent() {
     
             if (response.ok) {
                 alert("Event created successfully!");
-                setEventData({ title: "", description: "", date: "", image: null });
+                setEventData({
+                    title: "",
+                    description: "",
+                    date: "",
+                    startTime: "",
+                    endTime: "",
+                    image: null,
+                    location: "" // Reset location to empty string
+                });
             } else {
                 alert("Failed to create event.");
             }
@@ -90,6 +102,28 @@ export default function CreateEvent() {
                         />
                     </div>
                     <div className="mb-4">
+                        <label className="block font-semibold">Start Time:</label>
+                        <input 
+                            type="time"
+                            name="startTime"
+                            value={eventData.startTime}
+                            onChange={handleChange}
+                            required
+                            className="w-full p-2 border rounded mt-1"
+                        />
+                    </div>
+                    <div className="mb-4">
+                        <label className="block font-semibold">End Time:</label>
+                        <input 
+                            type="time"
+                            name="endTime"
+                            value={eventData.endTime}
+                            onChange={handleChange}
+                            required
+                            className="w-full p-2 border rounded mt-1"
+                        />
+                    </div>
+                    <div className="mb-4">
                         <label className="block font-semibold">Upload Image:</label>
                         <input 
                             type="file"
@@ -98,6 +132,21 @@ export default function CreateEvent() {
                             className="w-full p-2 border rounded mt-1"
                         />
                     </div>
+                    
+                    {/* Location input field */}
+                    <div className="mb-4">
+                        <label className="block font-semibold">Event Location (Address):</label>
+                        <input 
+                            type="text"
+                            name="location"
+                            value={eventData.location}
+                            onChange={handleChange}
+                            required
+                            className="w-full p-2 border rounded mt-1"
+                            placeholder="Enter the event location"
+                        />
+                    </div>
+
                     <button 
                         type="submit" 
                         className="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600 transition"

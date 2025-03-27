@@ -6,6 +6,8 @@ import path from "path";
 import sequelize from "./db.js";
 import authRoutes from "./routes/auth.js";
 import eventRoutes from "./routes/events.js";
+import banRequestRoute from "./routes/banRequest.js";
+
 
 dotenv.config();
 
@@ -24,6 +26,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/uploads", express.static("uploads"));
 
 // Routes
+app.use("/api/banRequest", banRequestRoute);
 app.use("/api/events", eventRoutes);
 app.use("/api/auth", authRoutes);
 
