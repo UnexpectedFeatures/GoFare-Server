@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { useState, useContext } from "react";
+import { useState, useContext, useEffect } from "react";
 import { motion } from "framer-motion";
 import axios from "axios";
 import { Eye, EyeOff } from "lucide-react"; // Icons for show/hide
@@ -15,28 +15,52 @@ function Login() {
     const [errorMessage, setErrorMessage] = useState(""); 
     const navigate = useNavigate();
 
+    const validateEmail = (email) => {
+        // Basic email format check
+        const emailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
+        if (!emailRegex.test(email)) {
+            return "Only Gmail addresses (@gmail.com) are allowed.";
+        }
+        return null;
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setErrorMessage(""); 
+        setErrorMessage("");
+        
+        if (!isLogin) {
+            const emailError = validateEmail(email);
+            if (emailError) {
+                setErrorMessage(emailError);
+                return;
+            }
+
+            const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,16}$/;
+            if (!passwordRegex.test(password)) {
+                setErrorMessage("Password must be 8-16 characters long and include at least one letter and one number.");
+                return;
+            }
+        }
+    
         try {
             const endpoint = isLogin ? "login" : "register";
             const payload = isLogin ? { email, password } : { username, email, password };
     
             const res = await axios.post(`http://localhost:5000/api/auth/${endpoint}`, payload);
     
-            console.log("Response:", res.data); 
+            console.log("Response:", res.data);
     
             if (res.data.token) {
                 if (res.data.status === "banned") {
                     navigate("/ban-request");
                     return;
                 }
-
+    
                 localStorage.setItem("userToken", res.data.token);
                 localStorage.setItem("userEmail", email);
                 localStorage.setItem("userRole", res.data.role);
-                localStorage.setItem("username", res.data.username);
-                localStorage.setItem("userPhone", res.data.phone); 
+                localStorage.setItem("userName", username);
+                localStorage.setItem("userPhone", res.data.phone);
                 localStorage.setItem("userBirthday", res.data.birthday);
                 localStorage.setItem("userGender", res.data.gender);
                 localStorage.setItem("userHomeAddress", res.data.home_address);
@@ -46,10 +70,14 @@ function Login() {
                 navigate("/user-pannel");
             }
         } catch (error) {
-            console.error("Error:", error.response?.data); 
+            console.error("Error:", error.response?.data);
             setErrorMessage(error.response?.data?.message || "Something went wrong");
         }
     };
+    
+    useEffect(() => {
+        setErrorMessage(""); // Clear error when switching between login and signup
+    }, [isLogin]);
     
     return (
         <div className="h-[calc(100vh-100px)] flex items-center justify-center bg-gray-100">
@@ -141,11 +169,15 @@ function Login() {
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="text-center mt-4 text-gray-600">
                     {isLogin ? "Don't have an account?" : "Already have an account?"}
                     <button
-                        onClick={() => setIsLogin(!isLogin)}
+                        onClick={() => {
+                            setIsLogin(!isLogin);
+                            setErrorMessage("");  // Clear error when switching modes
+                        }}
                         className="text-blue-500 ml-1 underline hover:text-blue-700 transition"
                     >
                         {isLogin ? "Sign Up" : "Login"}
                     </button>
+
                 </motion.div>
             </div>
         </div>

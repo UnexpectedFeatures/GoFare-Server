@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import axios from "axios";
 import { formatDistanceToNow } from "date-fns";
-import { useTheme } from "./ThemeContext"; // Assuming you have a theme context
+import { useTheme } from "./ThemeContext"; 
 
 function UserPanel() {
   const { darkMode } = useTheme();
@@ -12,7 +12,7 @@ function UserPanel() {
   const [errorMessage] = useState("");
 
   useEffect(() => {
-    const username = localStorage.getItem("username") || "Guest";
+    const username = localStorage.getItem("userName") || "Guest";
     const role = localStorage.getItem("userRole") || "Unknown";
     const email = localStorage.getItem("userEmail") || "Not provided";
     const lastLogin = localStorage.getItem("lastLogin");

@@ -97,7 +97,7 @@ router.post("/login", async (req, res) => {
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res.status(401).json({ message: "Invalid credentials" });
+      return res.status(401).json({ message: "Incorrect password or username." });
     }
 
     const lastLogin = user.last_login ? user.last_login.toISOString() : "First login";
@@ -261,35 +261,6 @@ router.patch('/updateUser/:email', async (req, res) => {
   }
 });
 
-router.post("/create-mod", async (req, res) => {
-  try {
-    const { username, email, password } = req.body;
-
-    if (!username || !email || !password) {
-      return res.status(400).json({ message: "All fields are required" });
-    }
-
-    const existingEmail = await User.findOne({ where: { email } });
-    if (existingEmail) {
-      return res.status(400).json({ message: "Email already in use" });
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const user = await User.create({ username, email, password: hashedPassword });
-
-    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: "1h" });
-
-    res.status(201).json({
-      message: "User created successfully",
-      token,
-      role: "moderator",
-    });
-  } catch (error) {
-    console.error("Error during registration:", error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
 router.post("/forgot-password", async (req, res) => {
   try {
     const { email } = req.body;
@@ -312,6 +283,43 @@ router.post("/forgot-password", async (req, res) => {
     res.json({ message: "Password reset link sent to your email!" });
   } catch (error) {
     console.error("Error in forgot-password:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+router.patch("/change-pass/:email", async (req, res) => {
+  try {
+    const { email } = req.params;
+    const { oldPassword, newPassword } = req.body;
+
+    if (!email || !oldPassword || !newPassword) {
+      return res.status(400).json({ message: "All fields are required." });
+    }
+
+    console.log("Received data:", { email, oldPassword, newPassword });
+
+    const user = await User.findOne({ where: { email } });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    const isMatch = await bcrypt.compare(oldPassword, user.password);
+
+    if (!isMatch) {
+      return res.status(400).json({ message: "Incorrect old password." });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    await User.update(
+      { password: hashedPassword },
+      { where: { email } }
+    );
+
+    return res.status(200).json({ message: "Password updated successfully." });
+  } catch (error) {
+    console.error("Error changing password:", error);
     res.status(500).json({ error: "Internal Server Error" });
   }
 });

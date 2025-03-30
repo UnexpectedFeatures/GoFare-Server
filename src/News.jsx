@@ -136,7 +136,7 @@ const DisasterNews = () => {
   return (
     <div className="p-4">
       <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-        <div className="container mx-auto p-8">
+        <div className="container mx-auto p-8 sm:mt-[-140px]">
           <h1 className="text-5xl font-black text-red-700 mb-8 ml-16">HEADLINES</h1>
           <div className="flex flex-col md:flex-row">
             {/* Search Section */}

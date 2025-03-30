@@ -7,11 +7,11 @@ function AboutUs() {
     return (
         <div>
             <section
-                className={`relative py-10 flex items-center justify-center min-h-screen mt-[-100px]`}
+                className={`relative py-10 flex items-center justify-center min-h-screen mt-[-60px] sm:mt-[-100px]`}
                 style={{ backgroundImage: "url('../src/img/about-us-image.png')", backgroundSize: "100% 100%"}}
             >
                 {/* Content */}
-                <div className={`relative z-10 max-w-4xl mx-auto p-6 sm:p-10 rounded-2xl shadow-lg border border-white/20 
+                <div className={`relative z-10 w-100 sm:max-w-4xl mx-auto p-6 sm:p-10 rounded-2xl shadow-lg border border-white/20 
                     ${darkMode ? "bg-gray-800 text-white" : "bg-white text-gray-700"} bg-opacity-90 transition duration-300`}>
                     <h2 className="text-4xl sm:text-5xl font-extrabold text-red-500 text-center mb-6">ABOUT US</h2>
                     <p className="text-lg sm:text-xl leading-relaxed text-center">

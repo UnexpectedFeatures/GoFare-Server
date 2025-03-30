@@ -110,15 +110,9 @@ function Topbar() {
             </button>
 
             {isMenuOpen && (
-              <div className="absolute left-[-78px] sm:right-0 mt-2 w-48 bg-white shadow-lg rounded-md py-2 z-50 font-sans">
+              <div className="absolute left-[-78px] text-gray-700 sm:right-0 mt-2 w-48 bg-white shadow-lg rounded-md py-2 z-50 font-sans">
                 {isLoggedIn ? (
                   <>
-                    <button 
-                      onClick={() => navigate("/profile")} 
-                      className="block w-full text-left px-4 py-2 text-sm font-sans hover:bg-gray-200 transition"
-                    >
-                      Profile
-                    </button>
                     <button 
                       onClick={() => navigate("/setting")} 
                       className="block w-full text-left px-4 py-2 text-sm font-sans hover:bg-gray-200 transition"

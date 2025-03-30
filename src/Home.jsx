@@ -97,7 +97,7 @@ function Home() {
 
       <div className="relative mt-6">
         {/* Navigation Arrows */}
-        <button onClick={prevTip} className="absolute -left-12 top-1/2 transform -translate-y-1/2 bg-gray-300 p-3 rounded-full shadow-md">
+        <button onClick={prevTip} className="absolute -left-10 sm:-left-12 top-1/2 transform -translate-y-1/2 bg-gray-300 p-2 sm:p-3 rounded-full shadow-md">
           <ChevronLeft className="w-5 h-5" />
         </button>
 
@@ -108,7 +108,7 @@ function Home() {
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.8 }}
             transition={{ duration: 0.4, ease: "easeOut" }}
-            className={`w-[420px] h-[400px] sm:w-[700px] bg-white shadow-lg rounded-lg flex overflow-hidden`}
+            className={`w-[400px] h-[400px] sm:w-[700px] bg-white shadow-lg rounded-lg flex overflow-hidden`}
           >
             {/* Disaster Image & Info */}
             <div className={`w-1/2 p-6 text-white flex flex-col justify-between ${getBackgroundColor(disasters[index].type)}`}>
@@ -142,7 +142,7 @@ function Home() {
           </motion.div>
         </AnimatePresence>
 
-        <button onClick={nextTip} className="absolute -right-12 top-1/2 transform -translate-y-1/2 bg-gray-300 p-3 rounded-full shadow-md">
+        <button onClick={nextTip} className="absolute -right-10 sm:-right-12 top-1/2 transform -translate-y-1/2 bg-gray-300 p-2 sm:p-3 rounded-full shadow-md">
           <ChevronRight className="w-5 h-5" />
         </button>
       </div>
@@ -150,7 +150,7 @@ function Home() {
       {/* Dots Navigation */}
       <div className="mt-4 flex gap-2">
         {disasters.map((_, i) => (
-          <button key={i} onClick={() => setTip(i)} className={`w-3 h-3 rounded-full ${index === i ? "bg-gray-7 00" : "bg-gray-400"}`} />
+          <button key={i} onClick={() => setTip(i)} className={`w-3 h-3 rounded-full ${index === i ? "bg-gray-700" : "bg-gray-400"}`} />
         ))}
       </div>
 

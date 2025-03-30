@@ -24,7 +24,6 @@ function Footer() {
             <ul className="mt-2 space-y-2">
               <li><Link to="/about" className="text-gray-400 hover:text-white">About Us</Link></li>
               <li><Link to="/home" className="text-gray-400 hover:text-white">Safety Resources</Link></li>
-              <li><Link to="/contact" className="text-gray-400 hover:text-white">Contact Us</Link></li>
             </ul>
           </div>
   
@@ -40,6 +39,9 @@ function Footer() {
               </Link> 
               { " " } 
               to receive disaster alerts and updates.
+            </p>
+            <p className="mt-2 text-gray-400">
+              @disasterrisk00@gmail.com
             </p>
           </div>
         </div>
