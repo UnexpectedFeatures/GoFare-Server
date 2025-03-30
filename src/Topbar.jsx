@@ -16,8 +16,8 @@ function Topbar() {
 
     console.log("User Role Before Logout:", lastRole);
   
-    localStorage.removeItem("userToken");
-    localStorage.removeItem("userRole");
+    localStorage.clear();
+    setDarkMode(false);
     setIsLoggedIn(false);
     setIsMenuOpen(false);
   

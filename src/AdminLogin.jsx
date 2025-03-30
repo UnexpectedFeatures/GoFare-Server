@@ -9,23 +9,25 @@ function AdminLogin() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [errorMessage, setErrorMessage] = useState("");
+    const [successMessage, setSuccessMessage] = useState("");
     const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setErrorMessage("");
+        setSuccessMessage("");
         try {
             const res = await axios.post("http://localhost:5000/api/admin/adminLogin", { email, password });
             console.log("Response:", res.data);
 
             if (res.data.token) {
                 if (res.data.status === "banned") {
-                    alert("Your account has been banned.");
+                    setErrorMessage("Your account has been banned.");
                     return;
                 }
                 
                 if (res.data.role.toLowerCase() === "admin" || res.data.role.toLowerCase() === "moderator") {
-                    alert("Login successful!");
+                    setSuccessMessage("Login successful!");
                     localStorage.setItem("userToken", res.data.token);
                     localStorage.setItem("userEmail", email);
                     localStorage.setItem("userRole", res.data.role.toLowerCase());
@@ -33,24 +35,39 @@ function AdminLogin() {
                     localStorage.setItem("lastLogin", res.data.lastLogin);
                     
                     setIsLoggedIn(true);
-                    navigate("/admin-pannel");
+                    setTimeout(() => {
+                        navigate("/admin-pannel");
+                    }, 500); // Delay to allow success message to be shown
                 } else {
-                    alert("Admin authorization only!");
+                    setErrorMessage("Admin authorization only!");
                 }
             }
         } catch (error) {
             console.error("Error:", error.response?.data);
-            alert("Error: " + (error.response?.data?.message || "Something went wrong"));
+            setErrorMessage(error.response?.data?.message || "Something went wrong");
         }
     };
 
     return (
-        <div className="h-[calc(100vh-100px)] flex items-center justify-center bg-gray-100">
+        <div className="h-[calc(100vh-100px)] flex items-center justify-center bg-gray-100 text-black">
             <div className="relative w-96 p-8 bg-white shadow-lg rounded-lg">
                 <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
                     <h2 className="text-3xl font-semibold text-center text-gray-700 mb-6">Admin Login</h2>
                 </motion.div>
 
+                {/* Success message */}
+                {successMessage && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.5 }}
+                        className="text-green-500 text-center mb-4"
+                    >
+                        {successMessage}
+                    </motion.div>
+                )}
+
+                {/* Error message */}
                 {errorMessage && (
                     <motion.div
                         initial={{ opacity: 0 }}
