@@ -44,18 +44,18 @@ function Layout() {
       {/* Show AdminNavBar only on admin-related pages (excluding admin-login) */}
       {isAdminSection && <AdminNavBar />}
 
-      <main className="flex-grow">
+      <main className="flex-grow mt-16 sm:mt-20 md:mt-24 lg:mt-28">
         <Routes>
           <Route path="/" element={<Navigate to="/home" />} />
           <Route path="/home" element={<Home />} />
           <Route path="/admin-login" element={<ProtectedAdminLogin />} />
           <Route path="/login" element={<ProtectedLogin />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/reset-password/:token" element={<ResetPassword />} />
           <Route path="/setting" element={<Setting />} />
           <Route path="/profile" element={<Profile />} />
-          <Route path="/about" element={<AboutUs />} />
           <Route path="/news" element={<News />} />
+          <Route path="/about" element={<AboutUs />} />
           <Route path="/user-list" element={<UserList />} />
           <Route path="/appeal" element={<AccountAppeal />} />
           <Route path="/mod-list" element={<ModList />} />
@@ -72,7 +72,6 @@ function Layout() {
     </div>
   );
 }
-
 
 function App() {
   return (

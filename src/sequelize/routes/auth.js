@@ -88,7 +88,7 @@ router.post("/login", async (req, res) => {
 
     const user = await User.findOne({ where: { email } });
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json({ message: "Incorrect password or username." });
     }
   
     if (user.banned) {

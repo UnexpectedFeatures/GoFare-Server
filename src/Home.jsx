@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import { ChevronLeft, ChevronRight, AlertTriangle, Check, Shield } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTheme } from "./ThemeContext"; 
+
 
 const disasters = [
   {
@@ -51,6 +53,7 @@ const disasters = [
 ];
 
 function Home() {
+  const { darkMode } = useTheme();
   const [index, setIndex] = useState(0);
   const [events, setEvents] = useState([]);
 
@@ -105,7 +108,7 @@ function Home() {
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.8 }}
             transition={{ duration: 0.4, ease: "easeOut" }}
-            className={`w-[700px] h-[400px] bg-white shadow-lg rounded-lg flex overflow-hidden`}
+            className={`w-[420px] h-[400px] sm:w-[700px] bg-white shadow-lg rounded-lg flex overflow-hidden`}
           >
             {/* Disaster Image & Info */}
             <div className={`w-1/2 p-6 text-white flex flex-col justify-between ${getBackgroundColor(disasters[index].type)}`}>
@@ -123,13 +126,13 @@ function Home() {
             </div>
 
             {/* Safety Tips */}
-            <div className="w-1/2 p-6 flex flex-col justify-between bg-white dark:bg-gray-600">
-              <h3 className="text-lg font-bold flex items-center gap-2 text-gray-800 dark:text-white">
+            <div className={`w-1/2 p-6 flex flex-col justify-between ${darkMode ? "bg-gray-700 text-white" : "bg-white text-gray-700"}`}>
+              <h3 className="text-lg font-bold flex items-center gap-2">
                 <Shield className="w-5 h-5 text-red-500" /> Safety Tips
               </h3>
               <ul className="mt-4 space-y-2">
                 {disasters[index].tips.map((tip, i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
+                  <li key={i} className="flex items-start gap-2 text-sm">
                     <Check className="w-4 h-4 text-yellow-500" /> {tip}
                   </li>
                 ))}
@@ -147,7 +150,7 @@ function Home() {
       {/* Dots Navigation */}
       <div className="mt-4 flex gap-2">
         {disasters.map((_, i) => (
-          <button key={i} onClick={() => setTip(i)} className={`w-3 h-3 rounded-full ${index === i ? "bg-gray-900" : "bg-gray-400"}`} />
+          <button key={i} onClick={() => setTip(i)} className={`w-3 h-3 rounded-full ${index === i ? "bg-gray-7 00" : "bg-gray-400"}`} />
         ))}
       </div>
 
@@ -157,7 +160,7 @@ function Home() {
         <h2 className="text-2xl font-bold text-center mb-6">Upcoming Events</h2>
 
         {events.length === 0 ? (
-          <div className="bg-white p-6 rounded-lg shadow-md text-center">
+          <div className={`${darkMode ? "bg-gray-700 text-white" : "bg-white text-gray-700"} p-6 rounded-lg shadow-md text-center`}>
             <p className="text-gray-500">No events available.</p>
           </div>
         ) : (
@@ -177,38 +180,30 @@ function Home() {
                 )}
 
                 {/* Info Container */}
-                <div className="p-4 bg-gray-50 flex-1">
+                <div className={`p-4 flex-1 ${darkMode ? "bg-gray-700 text-white" : "bg-gray-50 text-gray-800"}`}>
+
                   {/* Location at Top */}
                   {event.location && (
-                    <div className="text-sm text-gray-500 mb-2">
+                    <div className="text-sm mb-2">
                       <strong>Location:</strong> {event.location}
                     </div>
                   )}
 
-                  <h3 className="text-lg font-semibold text-gray-800">{event.title}</h3>
-                  <p className="text-sm text-gray-600">
+                  <h3 className="text-lg font-semibold">{event.title}</h3>
+                  <p className={`text-sm ${darkMode ? "text-white/70" : "text-gray-600"}`}>
                     {new Date(event.date).toLocaleDateString("en-US", { 
                       year: "numeric", 
                       month: "long", 
                       day: "numeric" 
                     })}
                   </p>
-                  <p className="mt-2 text-gray-700">{event.description}</p>
+                  <p className="mt-2">{event.description}</p>
                 </div>
               </div>
             ))}
           </div>
         )}
       </div>
-
-
-
-
-
-
-
-
-
     </div>
   );
 }

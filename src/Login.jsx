@@ -28,16 +28,10 @@ function Login() {
     
             if (res.data.token) {
                 if (res.data.status === "banned") {
-                    // Redirect to BanRequest page instead of alerting
                     navigate("/ban-request");
                     return;
                 }
-                if (res.data.role.toLowerCase() !== "user") {
-                    alert("User not found");
-                    return;
-                }
 
-                alert(isLogin ? "Login successful!" : "Signup successful!");
                 localStorage.setItem("userToken", res.data.token);
                 localStorage.setItem("userEmail", email);
                 localStorage.setItem("userRole", res.data.role);
@@ -50,11 +44,10 @@ function Login() {
     
                 setIsLoggedIn(true);
                 navigate("/user-pannel");
-                
             }
         } catch (error) {
             console.error("Error:", error.response?.data); 
-            alert("Error: " + (error.response?.data?.message || "Something went wrong"));
+            setErrorMessage(error.response?.data?.message || "Something went wrong");
         }
     };
     
@@ -67,18 +60,7 @@ function Login() {
                     </h2>
                 </motion.div>
 
-                {errorMessage && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ duration: 0.5 }}
-                        className="text-red-500 text-center mb-4"
-                    >
-                        {errorMessage}
-                    </motion.div>
-                )}
-
-                <motion.form initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5 }} className="space-y-4">
+                <motion.form onSubmit={handleSubmit} initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5 }} className="space-y-4">
                     {!isLogin && (
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                             <label className="block text-gray-700">Username</label>
@@ -126,6 +108,16 @@ function Login() {
                         </div>
                     </div>
 
+                    {errorMessage && (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ duration: 0.5 }}
+                            className="text-red-500 text-center mb-4"
+                        >
+                            {errorMessage}
+                        </motion.div>
+                    )}
                     {isLogin && (
                         <div className="text-center mt-2">
                             <button 
@@ -139,7 +131,7 @@ function Login() {
                     )}
 
                     <button
-                        onClick={handleSubmit}
+                        type="submit"
                         className="w-full bg-blue-500 text-white py-2 rounded-md hover:bg-blue-600 transition"
                     >
                         {isLogin ? "Login" : "Sign Up"}

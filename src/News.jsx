@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import { useTheme } from "./ThemeContext"; 
 
 const DisasterNews = () => {
+  const { darkMode } = useTheme();
   const [disasters, setDisasters] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -138,11 +140,11 @@ const DisasterNews = () => {
           <h1 className="text-5xl font-black text-red-700 mb-8 ml-16">HEADLINES</h1>
           <div className="flex flex-col md:flex-row">
             {/* Search Section */}
-            <div className="bg-white shadow-gray-800 rounded-2xl p-6 w-full lg:w-1/3 h-fit">
+            <div className={`${darkMode ? "bg-gray-700 text-white" : "bg-white text-gray-700"} shadow-gray-800 rounded-2xl p-6 w-full lg:w-1/3 h-fit`}>
               <h2 className="text-3xl font-black mb-4">SEARCH</h2>
 
               <input
-                className="w-full py-2 px-4 mb-4 border border-gray-300 rounded-lg bg-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-500"
+                className="text-gray-700 w-full py-2 px-4 mb-4 border border-gray-300 rounded-lg bg-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-500"
                 placeholder="Typhoon Name"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -151,7 +153,7 @@ const DisasterNews = () => {
               {/* Disaster Type Dropdown */}
               <label className="block text-lg font-semibold text-gray-700 mb-2">Disaster Type:</label>
               <select 
-                className="w-full py-2 px-4 mb-4 border border-gray-300 rounded-lg bg-gray-100 focus:outline-none focus:ring-2 focus:ring-red-500"
+                className="w-full py-2 px-4 mb-4 border border-gray-300 rounded-lg text-gray-500 bg-gray-100 focus:outline-none focus:ring-2 focus:ring-red-500"
                 value={selectedDisasterType} onChange={(e) => handleFilterChange(e, "disasterType")}
               >
                 <option value="">Select Disaster Type</option>
@@ -165,7 +167,7 @@ const DisasterNews = () => {
                 <>
                   <label className="block text-lg font-semibold text-gray-700 mb-2">Status:</label>
                   <select
-                    className="w-full py-2 px-4 mb-4 border border-gray-300 rounded-lg bg-gray-100 focus:outline-none focus:ring-2 focus:ring-red-500"
+                    className="text-gray-700 w-full py-2 px-4 mb-4 border border-gray-300 rounded-lg bg-gray-100 focus:outline-none focus:ring-2 focus:ring-red-500"
                     value={selectedStatus}
                     onChange={(e) => handleFilterChange(e, "status")}
                     disabled={!selectedDisasterType}
@@ -179,7 +181,7 @@ const DisasterNews = () => {
                   {/* Date Dropdown */}
                   <label className="block text-lg font-semibold text-gray-700 mb-2">Date:</label>
                   <select
-                    className="w-full py-2 px-4 mb-4 border border-gray-300 rounded-lg bg-gray-100 focus:outline-none focus:ring-2 focus:ring-red-500"
+                    className="text-gray-700 w-full py-2 px-4 mb-4 border border-gray-300 rounded-lg bg-gray-100 focus:outline-none focus:ring-2 focus:ring-red-500"
                     value={selectedDate}
                     onChange={(e) => handleFilterChange(e, "date")}
                     disabled={!selectedDisasterType}
@@ -195,18 +197,18 @@ const DisasterNews = () => {
 
             {/* Disaster News List */}
             <div className="md:w-3/4 p-4">
-              <div className="w-full bg-white rounded-2xl p-4">
-                <h1 className="text-3xl font-semibold mb-3 text-center text-gray-600">Disaster News in the Philippines</h1>
+              <div className={`w-full ${darkMode ? "bg-gray-700 text-white" : "bg-white text-gray-700" } rounded-2xl p-4`}>
+                <h1 className={`text-3xl font-semibold mb-3 text-center ${darkMode ? "text-white" : "text-gray-600"}`}>Disaster News in the Philippines</h1>
                 {filteredDisasters.length === 0 ? (
                   <div className="text-gray-500 text-center p-4">No disaster reports available.</div>
                 ) : (
                   <ul>
                     {filteredDisasters.map((disaster) => (
-                      <li key={disaster.id} className="mb-10 p-4 bg-white rounded-lg shadow-gray-600 shadow-md  hover:shadow-lg transition">
+                      <li key={disaster.id} className={`mb-10 p-4 rounded-lg shadow-md  hover:shadow-lg transition ${darkMode ? "bg-gray-800 text-white shadow-white" : "text-gray-700 bg-white shadow-gray-600"}`}>
                         <h3 className="text-xl font-bold text-gray-800">{disaster.name}</h3>
-                        <p className="text-gray-600 mt-2"><strong>Status:</strong> {disaster.status}</p>
-                        <p className="text-gray-600 mt-2"><strong>Disaster Type:</strong> {disaster.disasterType}</p>
-                        <p className="text-gray-600 mt-2"><strong>Date:</strong> {disaster.date}</p>
+                        <p className="mt-2"><strong>Status:</strong> {disaster.status}</p>
+                        <p className="mt-2"><strong>Disaster Type:</strong> {disaster.disasterType}</p>
+                        <p className="mt-2"><strong>Date:</strong> {disaster.date}</p>
                         <button
                           className="mt-4 text-blue-500 hover:text-blue-700"
                           onClick={() => openDialog(disaster)}

@@ -7,6 +7,7 @@ import sequelize from "./db.js";
 import authRoutes from "./routes/auth.js";
 import eventRoutes from "./routes/events.js";
 import banRequestRoute from "./routes/banRequest.js";
+import adminRoute from "./routes/admin.js";
 
 
 dotenv.config();
@@ -26,6 +27,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/uploads", express.static("uploads"));
 
 // Routes
+app.use("/api/admin", adminRoute);
 app.use("/api/banRequest", banRequestRoute);
 app.use("/api/events", eventRoutes);
 app.use("/api/auth", authRoutes);
@@ -36,12 +38,12 @@ app.use("/api/auth", authRoutes);
         console.log("✅ Database connected successfully!");
 
         await sequelize.sync({ alter: true }); 
-        console.log("✅ Database synchronized!");
     } catch (error) {
         console.error("❌ Database connection failed:", error);
         process.exit(1);
     }
 })();
+
 
 // Root route
 app.get("/", (req, res) => {

@@ -37,19 +37,36 @@ function Topbar() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-
+  
   return (
     <div className="w-full">
-      <nav className={`p-4 drop-shadow-md w-screen grid grid-cols-[1fr_5fr] items-center text-3xl font-bold transition-all duration-300 
-      ${darkMode ? "bg-gray-900 text-white shadow-[0_4px_10px_rgba(255,255,255,0.1)]" : "bg-gray-100 text-black drop-shadow-md"}`}>
-
-        <h2 className="text-red-500 text-6xl mr-100 font-archivo"> 
-          <span className="text-red-800">SAVE.</span>PH
-        </h2>
+      <nav 
+        className={`p-4 w-screen grid grid-cols-1 items-center text-3xl font-bold ${darkMode ? "text-white bg-gray-700" : "text-gray-700"}`} 
+        style={{
+          boxShadow: darkMode ? '0px 4px 10px rgba(255, 255, 255, 0.5)' : '0px 4px 10px rgba(0, 0, 0, 0.2)'
+        }}
+      >
+       <ul className={`gap-1 font-archivo flex flex-col sm:flex-row sm:gap-10 justify-center items-center `}>
         
-        <ul className="flex gap-10 font-archivo">
+          <li>
+            <Link
+              to="/"
+              >
+              <h2 className="text-red-500 text-3xl font-archivo flex sm:text-6xl"> 
+                <span className="text-red-800">SAVE.</span>PH
+              </h2> 
+            </Link>
+          </li>
+          <li className="text-2xl font-archivo flex sm:text-4xl">
+            <Link 
+              to="/" 
+              className={`hover:text-blue-500 hover:underline transition ${location.pathname === "/" ? "text-blue-500 underline" : ""}`}
+            >
+              Home
+            </Link>
+          </li>
           {isLoggedIn && (
-            <li className="ml-[-90px]">
+            <li className="text-2xl font-archivo flex sm:text-4xl">
             <Link 
               to="/user-pannel" 
               className={`hover:text-blue-500 hover:underline transition ${location.pathname === "/user-pannel" ? "text-blue-500 underline" : ""}`}
@@ -58,15 +75,7 @@ function Topbar() {
             </Link>
           </li>
           )}
-          <li>
-            <Link 
-              to="/" 
-              className={`hover:text-blue-500 hover:underline transition ${location.pathname === "/" ? "text-blue-500 underline" : ""}`}
-            >
-              Home
-            </Link>
-          </li>
-          <li>
+          <li className="text-2xl font-archivo flex sm:text-4xl">
             <Link 
               to="/news" 
               className={`${darkMode ? "text-white" : "text-black"}hover:text-blue-500 hover:underline transition ${location.pathname === "/news" ? "text-blue-500 underline" : ""}`}
@@ -74,7 +83,7 @@ function Topbar() {
               News
             </Link>
           </li>
-          <li>
+          <li className="text-2xl font-archivo flex sm:text-4xl">
             <Link 
               to="/about" 
               className={`hover:text-blue-500 hover:underline transition ${location.pathname === "/about" ? "text-blue-500 underline" : ""}`}
@@ -86,7 +95,7 @@ function Topbar() {
           {isLoggedIn && (
             <button 
               onClick={() => setDarkMode(!darkMode)} 
-              className="p-2 rounded-full shadow-md cursor-pointer border-b-2 dark:bg-white hover:bg-gray-300 dark:hover:bg-white transition"
+              className="p-2 rounded-full shadow-md max-h-14 w-11 cursor-pointer border-b-2 dark:bg-white hover:bg-gray-300 dark:hover:bg-white transition"
             >
               {darkMode ? <Sun className="w-7 h-7 text-amber-300" /> : <Moon className="w-7 h-7 text-gray-900" />}
             </button>
@@ -101,7 +110,7 @@ function Topbar() {
             </button>
 
             {isMenuOpen && (
-              <div className="absolute right-0 mt-2 w-48 bg-white shadow-lg rounded-md py-2 z-50 font-sans">
+              <div className="absolute left-[-78px] sm:right-0 mt-2 w-48 bg-white shadow-lg rounded-md py-2 z-50 font-sans">
                 {isLoggedIn ? (
                   <>
                     <button 
