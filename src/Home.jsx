@@ -123,18 +123,19 @@ function Home() {
             </div>
 
             {/* Safety Tips */}
-            <div className="w-1/2 p-6 flex flex-col justify-between">
-              <h3 className="text-lg font-bold flex items-center gap-2">
+            <div className="w-1/2 p-6 flex flex-col justify-between bg-white dark:bg-gray-600">
+              <h3 className="text-lg font-bold flex items-center gap-2 text-gray-800 dark:text-white">
                 <Shield className="w-5 h-5 text-red-500" /> Safety Tips
               </h3>
               <ul className="mt-4 space-y-2">
                 {disasters[index].tips.map((tip, i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm">
+                  <li key={i} className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
                     <Check className="w-4 h-4 text-yellow-500" /> {tip}
                   </li>
                 ))}
               </ul>
             </div>
+
           </motion.div>
         </AnimatePresence>
 

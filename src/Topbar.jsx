@@ -40,8 +40,9 @@ function Topbar() {
 
   return (
     <div className="w-full">
-      <nav className="p-4 bg-gray-100 drop-shadow-md w-screen grid grid-cols-[1fr_5fr] items-center text-3xl font-bold">
-        
+      <nav className={`p-4 drop-shadow-md w-screen grid grid-cols-[1fr_5fr] items-center text-3xl font-bold transition-all duration-300 
+      ${darkMode ? "bg-gray-900 text-white shadow-[0_4px_10px_rgba(255,255,255,0.1)]" : "bg-gray-100 text-black drop-shadow-md"}`}>
+
         <h2 className="text-red-500 text-6xl mr-100 font-archivo"> 
           <span className="text-red-800">SAVE.</span>PH
         </h2>

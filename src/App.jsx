@@ -10,6 +10,7 @@ import ForgotPassword from "./ForgotPassword";
 import ResetPassword from "./ResetPassword";
 import News from "./News";
 import Home from "./Home";
+import AboutUs from "./AboutUs";
 import AdminLogin from "./AdminLogin";
 import UserPannel from "./UserPannel";
 import { useContext } from "react";
@@ -24,6 +25,7 @@ import UserList from "./UserList";
 import EventList from './EventList';
 import BanRequest from "./BanRequest";
 import AccountAppeal from "./AccountAppeal";
+
 function Layout() {
   const location = useLocation();
 
@@ -52,6 +54,7 @@ function Layout() {
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/setting" element={<Setting />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/about" element={<AboutUs />} />
           <Route path="/news" element={<News />} />
           <Route path="/user-list" element={<UserList />} />
           <Route path="/appeal" element={<AccountAppeal />} />

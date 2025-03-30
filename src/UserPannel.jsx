@@ -2,12 +2,14 @@ import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import axios from "axios";
 import { formatDistanceToNow } from "date-fns";
+import { useTheme } from "./ThemeContext"; // Assuming you have a theme context
 
 function UserPanel() {
+  const { darkMode } = useTheme();
   const [user, setUser] = useState({ username: "", role: "", email: "", lastLogin: "Never" });
-  const [disasterNews, setDisasterNews] = useState([]);
+  const [disasterNews] = useState([]);
   const [videos, setVideos] = useState([]);
-  const [errorMessage, setErrorMessage] = useState(""); // State to handle error messages for API requests
+  const [errorMessage] = useState("");
 
   useEffect(() => {
     const username = localStorage.getItem("username") || "Guest";
@@ -15,7 +17,6 @@ function UserPanel() {
     const email = localStorage.getItem("userEmail") || "Not provided";
     const lastLogin = localStorage.getItem("lastLogin");
 
-    // Check if lastLogin is valid before formatting
     const formattedLastLogin = lastLogin && !isNaN(new Date(lastLogin))
       ? formatDistanceToNow(new Date(lastLogin), { addSuffix: true })
       : "Never";
@@ -27,24 +28,6 @@ function UserPanel() {
       lastLogin: formattedLastLogin,
     });
 
-    {/*
-    const fetchDisasterNews = async () => {
-      try {
-        const response = await axios.get("https://data.humdata.org/api/3/action/datastore_search", {
-          params: { resource_id: "YOUR_CORRECT_RESOURCE_ID", limit: 5 },
-        });
-
-        if (response.data.success) {
-          setDisasterNews(response.data.result.records || []);
-        } else {
-          setErrorMessage("Error fetching disaster news: API did not return success.");
-        }
-      } catch (error) {
-        setErrorMessage("Error fetching disaster data: " + error.message);
-      }
-    };
-    */}
-
     const fetchMedia = () => {
       setVideos([
         { id: 1, title: "Earthquake Aftermath", url: "https://www.youtube.com/embed/l4uuDGDON0w" },
@@ -52,35 +35,32 @@ function UserPanel() {
       ]);
     };
 
-    //fetchDisasterNews();
     fetchMedia();
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col items-center p-6 w-screen overflow-hidden">
+    <div className={`min-h-screen flex flex-col items-center p-6 w-screen overflow-hidden transition-colors duration-300 ${darkMode ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-900"}`}>
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="bg-white shadow-xl rounded-lg p-6 w-full max-w-4xl mx-auto"
+        className={`shadow-lg rounded-lg p-6 w-full max-w-4xl mx-auto transition-colors duration-300 ${darkMode ? "bg-gray-800" : "bg-white"}`}
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b pb-4">
+        <div className="flex items-center justify-between border-b pb-4 border-gray-500">
           <h1 className="text-2xl font-bold text-red-600">Disaster Risk Dashboard</h1>
         </div>
 
         {/* User Info */}
         <div className="mt-4 flex items-center space-x-4">
-          <div className="w-16 h-16 bg-gray-300 rounded-full flex items-center justify-center">
-            <span className="text-gray-600 text-xl font-bold">
-              {user.username.charAt(0).toUpperCase()}
-            </span>
+          <div className={`w-16 h-16 rounded-full flex items-center justify-center text-xl font-bold transition-colors duration-300 ${darkMode ? "bg-gray-700 text-white" : "bg-gray-300 text-gray-700"}`}>
+            {user.username.charAt(0).toUpperCase()}
           </div>
           <div>
             <h2 className="text-xl font-semibold">{user.username}</h2>
-            <p className="text-gray-500">Role: {user.role}</p>
-            <p className="text-gray-500">Email: {user.email}</p>
-            <p className="text-gray-500">Last Login: {user.lastLogin}</p>
+            <p className="text-gray-400">Role: {user.role}</p>
+            <p className="text-gray-400">Email: {user.email}</p>
+            <p className="text-gray-400">Last Login: {user.lastLogin}</p>
           </div>
         </div>
 
@@ -93,29 +73,36 @@ function UserPanel() {
 
         {/* News Section */}
         <div className="mt-6">
-          <h2 className="text-lg font-semibold text-gray-700">Latest Disaster News</h2>
+          <h2 className="text-lg font-semibold">Latest Disaster News</h2>
           <div className="mt-3 space-y-3">
             {disasterNews.length > 0 ? (
               disasterNews.map((news, index) => (
-                <div key={index} className="bg-gray-50 p-3 rounded-lg border-l-4 border-red-500">
+                <motion.div
+                  key={index}
+                  className={`p-4 rounded-lg border-l-4 transition-all duration-300 ${darkMode ? "bg-gray-700 border-red-500 text-white" : "bg-gray-50 border-red-500 text-gray-900"}`}
+                  whileHover={{ scale: 1.02 }}
+                >
                   <h3 className="font-bold text-red-600">{news.Name}</h3>
-                  <p className="text-sm text-gray-600">{news.info}</p>
-                </div>
+                  <p className="text-sm">{news.info}</p>
+                </motion.div>
               ))
             ) : (
-              <p className="text-gray-500">No disaster news available.</p>
+              <p className="text-gray-400">No disaster news available.</p>
             )}
           </div>
         </div>
 
         {/* Media Section */}
         <div className="mt-6">
-          <h2 className="text-lg font-semibold text-gray-700">Disaster Media</h2>
+          <h2 className="text-lg font-semibold">Disaster Media</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
-            {/* Videos */}
             {videos.map((video) => (
-              <div key={video.id} className="bg-gray-50 p-3 rounded-lg">
-                <h3 className="font-bold text-blue-600">{video.title}</h3>
+              <motion.div
+                key={video.id}
+                className={`p-4 rounded-lg transition-all duration-300 ${darkMode ? "bg-gray-700 text-white" : "bg-gray-50 text-gray-900"}`}
+                whileHover={{ scale: 1.02 }}
+              >
+                <h3 className="font-bold text-blue-500">{video.title}</h3>
                 <iframe
                   width="100%"
                   height="250"
@@ -125,7 +112,7 @@ function UserPanel() {
                   allowFullScreen
                   className="rounded-md w-full"
                 ></iframe>
-              </div>
+              </motion.div>
             ))}
           </div>
         </div>
