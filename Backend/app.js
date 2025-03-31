@@ -1,13 +1,19 @@
-import admin from "firebase-admin";
-import { readFile } from "fs/promises";
+import express from "express";
+import fetchUsers from "./Controllers/fetchAll.js";
 
-const serviceAccount = JSON.parse(
-  await readFile(new URL("key.json", import.meta.url))
-);
+const app = express();
+const PORT = process.env.PORT;
 
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-  databaseURL: "https://appdev-75624-default-rtdb.firebaseio.com",
-});
+async function initializeApp() {
+  try {
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
+    await fetchUsers();
+  } catch (error) {
+    console.error("Error initializing the application:", error);
+    process.exit(1);
+  }
+}
 
-console.log("Firebase connected successfully!");
+initializeApp();
