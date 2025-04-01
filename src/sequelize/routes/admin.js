@@ -58,10 +58,11 @@ router.post("/create-mod", async (req, res) => {
 
     const { username, email, password, phone, gender, birthday, address } = req.body;
 
+    const existingMod = await AdminModel.findOne({ email });
     if (!username || !email || !password || !phone || !gender || !birthday || !address) {
         return res.status(400).json({ message: "All fields are required!" });
     }
-
+    
     try {
         // 🔹 Hash password before saving
         const hashedPassword = await bcrypt.hash(password, 10);
@@ -83,7 +84,14 @@ router.post("/create-mod", async (req, res) => {
         res.status(201).json({ message: "Moderator created successfully!", newMod });
     } catch (error) {
         console.error("🔹 Error creating moderator:", error);
-        res.status(500).json({ message: "Server error" });
+        
+        
+        if (existingMod) {
+            return res.status(400).json({ message: "Email is already taken!" });
+        }
+        else {
+            res.status(500).json({ message: "Server error" });
+        }
     }
 });
 

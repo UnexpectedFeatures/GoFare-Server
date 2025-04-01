@@ -24,6 +24,7 @@ function Footer() {
             <ul className="mt-2 space-y-2">
               <li><Link to="/about" className="text-gray-400 hover:text-white">About Us</Link></li>
               <li><Link to="/home" className="text-gray-400 hover:text-white">Safety Resources</Link></li>
+              <li><Link to="/donation" className="text-gray-400 hover:text-white">Donate Now</Link></li>
             </ul>
           </div>
   

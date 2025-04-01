@@ -26,6 +26,7 @@ import EventList from './EventList';
 import BanRequest from "./BanRequest";
 import AccountAppeal from "./AccountAppeal";
 import ChangePass from "./ChangePass";
+import Donation from "./Donation";
 
 function Layout() {
   const location = useLocation();
@@ -54,6 +55,7 @@ function Layout() {
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password/:token" element={<ResetPassword />} />
           <Route path="/setting" element={<Setting />} />
+          <Route path="/donation" element={<Donation />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/change-pass" element={<ChangePass />} />
           <Route path="/news" element={<News />} />

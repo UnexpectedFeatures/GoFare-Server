@@ -126,7 +126,7 @@ router.post("/login", async (req, res) => {
   }
 });
 
-//For Admin where it Select all the 'Users'
+
 
 router.get("/users/:roles", async (req, res) => {
   try {
@@ -362,5 +362,31 @@ router.patch("/reset-password/:token", async (req, res) => {
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
+
+router.get("/getUserInfo/:emails", async (req, res) => {
+  console.log("Received request for:", req.originalUrl); // Log the full requested URL
+
+  try {
+    const emails = req.params.emails;
+    const user = await User.findOne({ where: { email: emails } });
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    res.json({
+      username: user.username,
+      role: user.role,
+      email: user.email,
+      last_login: user.last_login,
+    });
+  } catch (error) {
+    console.error("Error during fetch:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+
+
 
 export default router;

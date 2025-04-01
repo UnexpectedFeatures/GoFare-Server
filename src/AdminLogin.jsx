@@ -17,6 +17,12 @@ function AdminLogin() {
         setErrorMessage("");
         setSuccessMessage("");
 
+        // Validate if fields are empty
+        if (!email || !password) {
+            setErrorMessage("Email and password cannot be empty.");
+            return;
+        }
+
         // Validate if email ends with @gmail.com
         if (!email.endsWith("@gmail.com")) {
             setErrorMessage("Only @gmail.com emails are allowed.");
