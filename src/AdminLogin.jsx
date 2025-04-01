@@ -16,6 +16,13 @@ function AdminLogin() {
         e.preventDefault();
         setErrorMessage("");
         setSuccessMessage("");
+
+        // Validate if email ends with @gmail.com
+        if (!email.endsWith("@gmail.com")) {
+            setErrorMessage("Only @gmail.com emails are allowed.");
+            return;
+        }
+
         try {
             const res = await axios.post("http://localhost:5000/api/admin/adminLogin", { email, password });
             console.log("Response:", res.data);
@@ -87,7 +94,7 @@ function AdminLogin() {
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
-                            placeholder="admin@example.com"
+                            placeholder="admin@gmail.com"
                             required
                         />
                     </div>

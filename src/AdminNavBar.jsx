@@ -12,21 +12,21 @@ function AdminTopBar() {
     const [isNavOpen, setIsNavOpen] = useState(false);
     const roles = localStorage.getItem("userRole")?.toLowerCase();
 
-    // Logout Function
     const handleLogout = () => {
         console.log("User Role Before Logout:", localStorage.getItem("userRole"));
     
         localStorage.removeItem("userToken");
         localStorage.removeItem("userRole");
     
-        setIsLoggedIn(false);
-    
         setTimeout(() => {
             console.log("Redirecting to /admin-login");
             navigate("/admin-login", { replace: true });
+    
+            // Delay setting isLoggedIn to prevent interfering with ProtectedLogin
+            setTimeout(() => setIsLoggedIn(false), 100);
         }, 200);
     };
-    
+
     return (
         <div>
             {/* Top Bar */}
