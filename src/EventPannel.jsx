@@ -64,7 +64,7 @@ export default function EventPannel() {
     };
 
     return (
-        <div className="flex items-center justify-center min-h-screen bg-gray-100 mt-7">
+        <div className="flex items-center justify-center min-h-screen bg-gray-100 mt-7 pb-20">
             <div className="w-full max-w-lg bg-white p-6 rounded-lg shadow-lg">
                 <h2 className="text-2xl font-bold mb-4 text-center">Create New Event</h2>
                 <form onSubmit={handleSubmit} encType="multipart/form-data">

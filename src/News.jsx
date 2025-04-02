@@ -205,7 +205,7 @@ const DisasterNews = () => {
                   <ul>
                     {filteredDisasters.map((disaster) => (
                       <li key={disaster.id} className={`mb-10 p-4 rounded-lg shadow-md  hover:shadow-lg transition ${darkMode ? "bg-gray-800 text-white shadow-white" : "text-gray-700 bg-white shadow-gray-600"}`}>
-                        <h3 className="text-xl font-bold text-gray-800">{disaster.name}</h3>
+                        <h3 className="text-xl font-bold">{disaster.name}</h3>
                         <p className="mt-2"><strong>Status:</strong> {disaster.status}</p>
                         <p className="mt-2"><strong>Disaster Type:</strong> {disaster.disasterType}</p>
                         <p className="mt-2"><strong>Date:</strong> {disaster.date}</p>
@@ -231,7 +231,7 @@ const DisasterNews = () => {
           className="fixed inset-0 flex justify-center items-center bg-black/40 z-50"
           onClick={handleOverlayClick}
         >
-          <div className="bg-white p-8 rounded-lg w-96 overflow-y-auto max-h-[80vh]">
+          <div className="bg-white p-8 rounded-lg w-96 sm:w-200 overflow-y-auto max-h-[80vh]">
             <h2 className="text-2xl font-bold text-gray-800 mb-4">{selectedDisaster.name}</h2>
             <p className="text-gray-700 mb-4">
               {renderDescriptionWithLinks(selectedDisaster.description)}

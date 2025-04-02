@@ -11,6 +11,7 @@ function Login() {
     const [username, setUsername] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [confirmPassword, setConfirmPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false); // Toggle state for password visibility
     const [errorMessage, setErrorMessage] = useState(""); 
     const navigate = useNavigate();
@@ -38,6 +39,11 @@ function Login() {
             const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,16}$/;
             if (!passwordRegex.test(password)) {
                 setErrorMessage("Password must be 8-16 characters long and include at least one letter and one number.");
+                return;
+            }
+
+            if (password !== confirmPassword) {
+                setErrorMessage("Passwords do not match.");
                 return;
             }
         }
@@ -134,6 +140,13 @@ function Login() {
                                 {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                             </button>
                         </div>
+
+                        {!isLogin && (
+                            <div>
+                                <label className="block text-gray-700">Confirm Password</label>
+                                <input type={showPassword ? "text" : "password"} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="w-full px-4 py-2 border rounded-md" required />
+                            </div>
+                        )}
                     </div>
 
                     {errorMessage && (

@@ -11,34 +11,71 @@ import { Op } from "sequelize";
 dotenv.config(); // Load environment variables
 
 const router = express.Router();
-
 const sendResetEmail = async (email, token) => {
   try {
+    // Create a transporter object using Gmail service
     const transporter = nodemailer.createTransport({
-      service: "gmail",
+      service: 'gmail',
       auth: {
         user: process.env.EMAIL_USER, // Ensure this is correctly loaded
         pass: process.env.EMAIL_PASS, // Use the App Password
       },
     });
 
+    // Construct the password reset link
     const resetLink = `http://localhost:5173/reset-password/${token}`;
 
+    // Set up the email options
     const mailOptions = {
-      from: `"Your App Name" <${process.env.EMAIL_USER}>`,
-      to: email,
-      subject: "Password Reset Request",
-      html: `<p>You requested a password reset. Click the link below to reset your password:</p>
-             <a href="${resetLink}">${resetLink}</a>
-             <p>This link will expire in 1 hour.</p>`,
+      from: `"Your App Name" <${process.env.EMAIL_USER}>`, // Sender's email
+      to: email, // Recipient's email
+      subject: 'Password Reset Request', // Email subject
+      html: `
+        <div style="font-family: Arial, sans-serif; color: #333;">
+          <h2 style="color: #e74c3c;">Password Reset Request</h2>
+          <p>Dear User,</p>
+          <p>We have received a request to reset the password for your account. If you did not initiate this request, please disregard this email, and your password will remain unchanged. Otherwise, please follow the instructions below to reset your password securely:</p>
+          
+          <p style="text-align: center; font-size: 16px;">
+            <a href="${resetLink}" 
+               style="background-color: #3498db; color: white; padding: 12px 25px; text-decoration: none; font-weight: bold; border-radius: 5px; text-align: center;">
+              Reset Your Password
+            </a>
+          </p>
+          
+          <p style="font-size: 14px; color: #555;">
+            The link above will direct you to a page where you can create a new password. Please note that for your security, this link will expire in 1 hour. If you do not reset your password within this time frame, you will need to request a new reset link.
+          </p>
+          
+          <p>If you experience any issues with resetting your password or if you need further assistance, please feel free to contact our support team at <strong>disaster00@gmail.com</strong>.</p>
+          
+          <p>For your security, please ensure that your new password is unique and contains a combination of uppercase letters, lowercase letters, numbers, and special characters. This will help protect your account from unauthorized access.</p>
+          
+          <p>If you have any further questions or concerns, don’t hesitate to reach out to us. We are always happy to assist you.</p>
+
+          <p>Thank you for using Your App Name! We are committed to providing you with the best experience possible.</p>
+
+          <p>Best regards,<br/>Team Crocodilo</p>
+          
+          <hr style="margin-top: 30px; border: 0; border-top: 1px solid #ccc;" />
+          
+          <p style="font-size: 12px; color: #888;">If you did not request a password reset, please ignore this email. No changes will be made to your account.</p>
+          
+          <div style="position: absolute; bottom: 10px; left: 10px; font-size: 12px; color: #888;">Thank you!</div>
+        </div>
+      `, // HTML content of the email
     };
 
+    // Send the email
     await transporter.sendMail(mailOptions);
-    console.log("Reset email sent successfully!");
+    console.log('Password reset email sent successfully!');
   } catch (error) {
-    console.error("Error sending email:", error);
+    // Log the error to the console for debugging
+    console.error('Error sending reset email:', error);
+    // Optionally, send the error to a logging service
   }
 };
+
 
 
 // Register

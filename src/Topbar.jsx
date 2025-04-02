@@ -47,7 +47,9 @@ function Topbar() {
         }}
       >
        <ul className={`gap-1 font-archivo flex flex-col sm:flex-row sm:gap-10 justify-center items-center `}>
-        
+          <li>
+            <img src="../src/img/logo.png" className="w-25"></img>
+          </li>
           <li>
             <Link
               to="/"
