@@ -1,15 +1,20 @@
 import express from "express";
+import dotenv from "dotenv";
+import startServerWebsocket from "./Websockets/serverSocket.js";
 import fetchUsers from "./Controllers/fetchAll.js";
 
+dotenv.config();
+
 const app = express();
-const PORT = process.env.PORT;
 
 async function initializeApp() {
   try {
-    app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
+    const server = app.listen(process.env.WS_PORT, () => {
+      console.log(`App is listening on port: ${process.env.WS_PORT}`);
     });
     await fetchUsers();
+
+    startServerWebsocket(server); // Pass the server object instead of the port
   } catch (error) {
     console.error("Error initializing the application:", error);
     process.exit(1);
