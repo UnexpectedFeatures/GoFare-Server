@@ -14,7 +14,7 @@ async function initializeApp() {
     });
     await fetchUsers();
 
-    startServerWebsocket(server); // Pass the server object instead of the port
+    startServerWebsocket(server);
   } catch (error) {
     console.error("Error initializing the application:", error);
     process.exit(1);
