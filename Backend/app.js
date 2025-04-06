@@ -9,16 +9,18 @@ dotenv.config();
 const app = express();
 
 async function initializeApp() {
+  const port = parseInt(process.env.PORT, 10);
+
   try {
-    app.listen(process.env.PORT, () => {
-      console.log(`Express app listening on port ${process.env.PORT}`);
+    app.listen(port, () => {
+      console.log(`(Express) Express app listening on port`, port);
     });
     startSocket1();
     startSocket2();
 
     await fetchUsers();
   } catch (error) {
-    console.error("Error initializing the application:", error);
+    console.error("(Express) Error initializing the application:", error);
     process.exit(1);
   }
 }
