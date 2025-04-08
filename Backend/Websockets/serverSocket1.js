@@ -33,14 +33,17 @@ function startSocket1() {
     });
   });
 
-  socket2Client = new WebSocket(`ws://localhost:${process.env.WS_PORT_2}`);
-  socket2Client.on("open", () => {
-    console.log("(Socket 1) Connected to Socket 2");
-  });
-  socket2Client.on("message", (data) => {
-    const msg = data.toString();
-    console.log("(Socket 1) Received from Socket 2:", msg);
-  });
+  // socket2Client = new WebSocket(`ws://localhost:${process.env.WS_PORT_2}`);
+  // socket2Client.on("open", () => {
+  //   console.log("(Socket 1) Connected to Socket 2");
+  // });
+
+  // socket2Client.on("message", (data) => {
+  //   const msg = data.toString();
+  //   if (msg.startsWith("[FORWARDED]")) {
+  //     console.log("(Socket 1) Received from Socket 2:", msg);
+  //   }
+  // });
 
   console.log(`(Socket 1) WebSocket server started on port`, port);
 }

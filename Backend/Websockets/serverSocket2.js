@@ -21,9 +21,9 @@ function startSocket2() {
       const msg = message.toString();
       console.log("(Socket 2) Message received:", msg);
 
-      if (!msg.startsWith("[FORWARDED]")) {
+      if (msg.startsWith("[FORWARDED]")) {
         if (socket1Client && socket1Client.readyState === WebSocket.OPEN) {
-          socket1Client.send(`[FORWARDED] ${msg}`);
+          socket1Client.send(msg);
         }
       }
     });
@@ -33,14 +33,16 @@ function startSocket2() {
     });
   });
 
-  socket1Client = new WebSocket(`ws://localhost:${process.env.WS_PORT_1}`);
-  socket1Client.on("open", () => {
-    console.log("(Socket 2) Connected to Socket 1");
-  });
-  socket1Client.on("message", (data) => {
-    const msg = data.toString();
-    console.log("(Socket 2) Received from Socket 1:", msg);
-  });
+  // socket1Client = new WebSocket(`ws://localhost:${process.env.WS_PORT_1}`);
+  // socket1Client.on("open", () => {
+  //   console.log("(Socket 2) Connected to Socket 1");
+  // });
+  // socket1Client.on("message", (data) => {
+  //   const msg = data.toString();
+  //   if (msg.startsWith("[FORWARDED]")) {
+  //     console.log("(Socket 2) Received from Socket 1:", msg);
+  //   }
+  // });
 
   console.log(`(Socket 2) WebSocket server started on port`, port);
 }
