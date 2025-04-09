@@ -1,7 +1,7 @@
 import db from "../database.js";
 
 export async function createModeUserAccountslIfNotExist() {
-  const ref = db.ref("userAccounts/user-");
+  const ref = db.ref("userAccounts/userTemplate");
   const snapshot = await ref.once("value");
 
   if (!snapshot.exists()) {
@@ -26,7 +26,7 @@ export async function createModeUserAccountslIfNotExist() {
 }
 
 export async function createModeWalletslIfNotExist() {
-    const ref = db.ref("userAccounts/user-/wallets");
+    const ref = db.ref("userAccounts/userTemplate/wallets");
     const snapshot = await ref.once("value");
   
     if (!snapshot.exists()) {

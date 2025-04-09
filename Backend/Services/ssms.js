@@ -1,23 +1,32 @@
 import { Sequelize } from "sequelize";
+import dotenv from "dotenv";
+import path from "path";
 
-const sequelize = new Sequelize("GoFare_TM", "Montenegro", "Monte", {
-  dialect: "mssql",
-  host: "localhost",
-  port: 1433,
-  dialectOptions: {
-    options: {
-      encrypt: false,
-      trustServerCertificate: true,
+dotenv.config({ path: path.resolve("..", ".env") });
+
+const sequelize = new Sequelize(
+  process.env.MSSQL_SERVER,
+  process.env.MSSQL_USER,
+  process.env.MSSQL_PASSWORD,
+  {
+    dialect: "mssql",
+    host: "localhost",
+    port: process.env.MSSQL_PORT,
+    dialectOptions: {
+      options: {
+        encrypt: false,
+        trustServerCertificate: true,
+      },
     },
-  },
-});
+  }
+);
 
 async function testConnection() {
   try {
     await sequelize.authenticate();
-    console.log("✅ Connected to the database!");
+    console.log("Connected to the database!");
   } catch (error) {
-    console.error("❌ Connection failed:", error);
+    console.error("Connection failed:", error);
   }
 }
 

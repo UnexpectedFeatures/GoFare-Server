@@ -4,13 +4,13 @@ import {
 } from "../Controllers/userInserter.js";
 
 export default async function insertUserAndWalletData() {
-  await insertUserData("ian", {
+  await insertUserData("RbwPIn5yxM024oxFZUa21h9bFZnH", {
     firstName: "Ayane",
     rfid: "aaa111",
-    email: "ayane@example.com",
+    email: "ayane@sakura.com",
   });
 
-  await insertWalletData("ian", {
+  await insertWalletData("RbwPIn5yxM024oxFZUa21h9bFZnH", {
     balance: 1000,
     currency: "USD",
   });
