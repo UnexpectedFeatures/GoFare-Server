@@ -12,8 +12,10 @@ import {
   createRoute1StationIfNotExist,
   createRoute2StationIfNotExist,
 } from "./Models/stationModels.js";
+import { createTransactionModelIfNotExist } from "./Models/transactionsModel.js";
 import insertUserAndWalletData from "./Services/insertion.js";
 import fetchUsers from "./Controllers/fetchAll.js";
+import runSimulation from "./Services/train.js";
 
 dotenv.config();
 
@@ -34,11 +36,14 @@ async function initializeApp() {
 
     await createModedevTemplatelIfNotExist();
     await createModeWalletslIfNotExist();
-    await insertUserAndWalletData();
     await createStationModelIfNotExist();
+    await createTransactionModelIfNotExist();
     await createRoute1StationIfNotExist();
     await createRoute2StationIfNotExist();
 
+    await insertUserAndWalletData();
+
+    await runSimulation();
     // await fetchUsers();
   } catch (error) {
     console.error(
