@@ -2,7 +2,7 @@ import db from "../database.js";
 
 const fetchUsers = async () => {
   try {
-    const snapshot = await db.ref("users").once("value");
+    const snapshot = await db.ref("ClientReference").once("value");
 
     if (!snapshot.exists()) {
       console.log("No users found.");

@@ -3,6 +3,10 @@ import dotenv from "dotenv";
 import chalk from "chalk";
 import startSocket1 from "./Websockets/serverSocket1.js";
 import startSocket2 from "./Websockets/serverSocket2.js";
+import {
+  createModeUserAccountslIfNotExist,
+  createModeWalletslIfNotExist,
+} from "./Services/collection.js";
 import fetchUsers from "./Controllers/fetchAll.js";
 
 dotenv.config();
@@ -21,6 +25,9 @@ async function initializeApp() {
     });
     startSocket1();
     startSocket2();
+
+    await createModeUserAccountslIfNotExist();
+    await createModeWalletslIfNotExist();
 
     await fetchUsers();
   } catch (error) {
