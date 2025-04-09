@@ -21,8 +21,6 @@ export async function insertUserData(userId, userData) {
     firstName: userData.firstName,
     email: userData.email,
     rfid: userData.rfid || null,
-    createdAt: admin.database.ServerValue.TIMESTAMP,
-    updatedAt: admin.database.ServerValue.TIMESTAMP,
     ...(userData.phoneNumber && { phoneNumber: userData.phoneNumber }),
     ...(userData.photoURL && { photoURL: userData.photoURL }),
   };

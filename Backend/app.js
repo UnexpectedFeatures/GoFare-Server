@@ -4,7 +4,7 @@ import chalk from "chalk";
 import startSocket1 from "./Websockets/serverSocket1.js";
 import startSocket2 from "./Websockets/serverSocket2.js";
 import {
-  createModeUserAccountslIfNotExist,
+  createModedevTemplatelIfNotExist,
   createModeWalletslIfNotExist,
 } from "./Services/collection.js";
 import insertUserAndWalletData from "./Services/insertion.js";
@@ -27,7 +27,7 @@ async function initializeApp() {
     startSocket1();
     startSocket2();
 
-    await createModeUserAccountslIfNotExist();
+    await createModedevTemplatelIfNotExist();
     await createModeWalletslIfNotExist();
     await insertUserAndWalletData();
 

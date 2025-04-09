@@ -6,9 +6,9 @@ import {
 export default async function insertUserAndWalletData() {
   await insertUserData("RbwPIn5yxM024oxFZUa21h9bFZnH", {
     firstName: "Ayane",
-    rfid: "aaa111",
+    rfid: "62c2125",
     email: "janivantot@gmail.com",
-    password: "securePassword123"
+    password: "securePassword123",
   });
 
   await insertWalletData("RbwPIn5yxM024oxFZUa21h9bFZnH", {

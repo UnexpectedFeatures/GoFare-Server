@@ -2,7 +2,12 @@ import db from "../database.js";
 
 export default async function fetchUser(ws, message) {
   try {
-    const rfid = message.trim();
+    if (!message.includes("Card Scanned:")) {
+      console.log("Ignoring unrelated message:", message);
+      return;
+    }
+
+    const rfid = message.replace("Card Scanned:", "").trim();
 
     if (!rfid) {
       throw new Error("RFID is missing");
@@ -12,7 +17,7 @@ export default async function fetchUser(ws, message) {
 
     const snapshot = await userRef
       .orderByChild("rfid")
-      .equalTo(rfid) 
+      .equalTo(rfid)
       .once("value");
 
     if (!snapshot.exists()) {

@@ -29,6 +29,8 @@ function startSocket1() {
           socket2Client.send(`[FORWARDED] ${msg}`);
         }
       }
+
+      ws.send("[ACK] Message received");
     });
 
     ws.on("close", () => {
