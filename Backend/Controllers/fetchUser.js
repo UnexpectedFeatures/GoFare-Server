@@ -8,7 +8,7 @@ export default async function fetchUser(ws, message) {
       throw new Error("RFID is missing");
     }
 
-    const userRef = db.ref("userAccounts");
+    const userRef = db.ref("ClientReference");
 
     const snapshot = await userRef
       .orderByChild("rfid")

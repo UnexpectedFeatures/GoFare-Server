@@ -2,50 +2,90 @@ import db from "../database.js";
 import admin from "firebase-admin";
 
 export async function insertUserData(userId, userData) {
-  const ref = db.ref(`userAccounts/${userId}`);
-  const snapshot = await ref.once("value");
+  if (!userId || !userData.email) {
+    throw new Error("User ID and email are required");
+  }
+
+  const authUserData = {
+    uid: userId,
+    email: userData.email,
+    emailVerified: false,
+    disabled: false,
+    ...(userData.firstName && { displayName: userData.firstName }),
+    ...(userData.password && { password: userData.password }),
+    ...(userData.phoneNumber && { phoneNumber: userData.phoneNumber }),
+    ...(userData.photoURL && { photoURL: userData.photoURL }),
+  };
+
+  const dbUserData = {
+    firstName: userData.firstName,
+    email: userData.email,
+    rfid: userData.rfid || null,
+    createdAt: admin.database.ServerValue.TIMESTAMP,
+    updatedAt: admin.database.ServerValue.TIMESTAMP,
+    ...(userData.phoneNumber && { phoneNumber: userData.phoneNumber }),
+    ...(userData.photoURL && { photoURL: userData.photoURL }),
+  };
 
   try {
-    await admin.auth().createUser({
-      uid: userId,
-      email: userData.email,
-      displayName: userData.firstName,
-    });
-    console.log(`User created in Authentication for ${userId}`);
-  } catch (error) {
-    if (error.code === "auth/uid-already-exists") {
-      console.log(
-        `User ${userId} already exists in Authentication, updating instead`
-      );
-      await admin.auth().updateUser(userId, {
-        email: userData.email,
-        displayName: userData.firstName,
-      });
-    } else {
-      throw error;
-    }
-  }
+    const ref = db.ref(`ClientReference/${userId}`);
+    const snapshot = await ref.once("value");
 
-  if (!snapshot.exists()) {
-    console.log(
-      `User account path 'userAccounts/${userId}' does not exist, creating user...`
-    );
-    await ref.set(userData);
-    console.log(`User account created for ${userId}`);
-  } else {
-    await ref.update(userData);
-    console.log(`User data inserted for ${userId}`);
+    try {
+      if (!snapshot.exists()) {
+        await admin.auth().createUser(authUserData);
+        console.log(`Successfully created auth user: ${userId}`);
+      } else {
+        await admin.auth().updateUser(userId, authUserData);
+        console.log(`Successfully updated auth user: ${userId}`);
+      }
+    } catch (authError) {
+      console.error("Firebase Auth error:", authError.message);
+      throw new Error(`Authentication operation failed: ${authError.message}`);
+    }
+
+    try {
+      if (!snapshot.exists()) {
+        await ref.set(dbUserData);
+        console.log(`Successfully created database record for: ${userId}`);
+      } else {
+        await ref.update(dbUserData);
+        console.log(`Successfully updated database record for: ${userId}`);
+      }
+    } catch (dbError) {
+      console.error("Database operation error:", dbError.message);
+      if (!snapshot.exists()) {
+        try {
+          await admin.auth().deleteUser(userId);
+          console.log(
+            `Rollback: Deleted auth user ${userId} due to database failure`
+          );
+        } catch (rollbackError) {
+          console.error("Rollback failed:", rollbackError.message);
+        }
+      }
+      throw new Error(`Database operation failed: ${dbError.message}`);
+    }
+
+    return {
+      success: true,
+      userId: userId,
+      authData: authUserData,
+      dbData: dbUserData,
+    };
+  } catch (error) {
+    console.error("Failed to insert user data:", error.message);
+    throw error;
   }
-  return true;
 }
 
 export async function insertWalletData(userId, walletData) {
-  const walletsRef = db.ref(`userAccounts/${userId}/wallets`);
+  const walletsRef = db.ref(`ClientReference/${userId}/wallets`);
   const snapshot = await walletsRef.once("value");
 
   if (!snapshot.exists()) {
     console.log(
-      `Wallet path 'userAccounts/${userId}/wallets' does not exist, creating wallet...`
+      `Wallet path 'ClientReference/${userId}/wallets' does not exist, creating wallet...`
     );
     await walletsRef.set(walletData);
     console.log(`Wallet created for user ${userId}`);
