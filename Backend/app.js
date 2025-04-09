@@ -6,7 +6,12 @@ import startSocket2 from "./Websockets/serverSocket2.js";
 import {
   createModedevTemplatelIfNotExist,
   createModeWalletslIfNotExist,
-} from "./Services/collection.js";
+} from "./Models/templateModel.js";
+import {
+  createStationModelIfNotExist,
+  createRoute1StationIfNotExist,
+  createRoute2StationIfNotExist,
+} from "./Models/stationModels.js";
 import insertUserAndWalletData from "./Services/insertion.js";
 import fetchUsers from "./Controllers/fetchAll.js";
 
@@ -30,8 +35,11 @@ async function initializeApp() {
     await createModedevTemplatelIfNotExist();
     await createModeWalletslIfNotExist();
     await insertUserAndWalletData();
+    await createStationModelIfNotExist();
+    await createRoute1StationIfNotExist();
+    await createRoute2StationIfNotExist();
 
-    await fetchUsers();
+    // await fetchUsers();
   } catch (error) {
     console.error(
       `${chalk.red("(Express)")} Error initializing the application:`,

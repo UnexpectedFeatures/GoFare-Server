@@ -2,6 +2,7 @@ import { WebSocketServer } from "ws";
 import WebSocket from "ws";
 import dotenv from "dotenv";
 import handleWebSocket1Message from "../Routes/webSocketRoute1.js";
+import startStationCycle from "../Services/stations.js";
 
 dotenv.config();
 
@@ -18,6 +19,8 @@ function startSocket1() {
       socket2Client.send("[NOTIFY] New client connected to Socket 1");
     }
 
+    startStationCycle(ws);
+
     ws.on("message", (message) => {
       const msg = message.toString();
       console.log("(Socket 1) Message received:", msg);
@@ -29,8 +32,6 @@ function startSocket1() {
           socket2Client.send(`[FORWARDED] ${msg}`);
         }
       }
-
-      ws.send("[ACK] Message received");
     });
 
     ws.on("close", () => {
