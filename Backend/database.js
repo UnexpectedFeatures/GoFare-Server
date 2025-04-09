@@ -18,3 +18,4 @@ console.log("Firebase Realtime Database connected successfully!");
 const db = admin.database();
 
 export default db;
+export const auth = admin.auth();
