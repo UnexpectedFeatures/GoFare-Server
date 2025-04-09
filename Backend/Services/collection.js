@@ -6,16 +6,16 @@ export async function createModeUserAccountslIfNotExist() {
 
   if (!snapshot.exists()) {
     const defaultData = {
-      accountStatus: "-",
-      address: "-",
-      age: "-",
-      gender: "-",
-      contactNumber: "-",
-      email: "--",
-      firstName: "-",
-      middleName: "-",
-      lastName: "-",
-      rfid: "-",
+        accountStatus: "-",
+        address: "-",
+        age: "-",
+        gender: "-", 
+        contactNumber: "-",
+        email: "--",
+        firstName: "-",
+        middleName: "-",
+        lastName: "-",
+        rfid: "-",
     };
 
     await ref.set(defaultData);
@@ -26,20 +26,21 @@ export async function createModeUserAccountslIfNotExist() {
 }
 
 export async function createModeWalletslIfNotExist() {
-  const ref = db.ref("userAccounts/user-/wallets");
-  const snapshot = await ref.once("value");
-
-  if (!snapshot.exists()) {
-    const defaultData = {
-      balance: "-",
-      currency: "-",
-      loanedAmount: "-",
-      status: "-",
-    };
-
-    await ref.set(defaultData);
-    console.log("Wallets model created in Firebase Realtime Database.");
-  } else {
-    console.log("Wallets model already exists.");
+    const ref = db.ref("userAccounts/user-/wallets");
+    const snapshot = await ref.once("value");
+  
+    if (!snapshot.exists()) {
+      const defaultData = {
+        balance: "-",
+        currency: "-",
+        loanedAmount: "-",
+        status: "-",
+      };
+  
+      await ref.set(defaultData);
+      console.log("Wallets model created in Firebase Realtime Database.");
+    } else {
+      console.log("Wallets model already exists.");
+    }
   }
-}
+  

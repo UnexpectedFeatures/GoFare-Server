@@ -1,6 +1,7 @@
 import { WebSocketServer } from "ws";
 import WebSocket from "ws";
 import dotenv from "dotenv";
+import handleWebSocket1Message from "../Routes/webSocketRoute1.js";
 
 dotenv.config();
 
@@ -20,6 +21,8 @@ function startSocket1() {
     ws.on("message", (message) => {
       const msg = message.toString();
       console.log("(Socket 1) Message received:", msg);
+
+      handleWebSocket1Message(ws, msg);
 
       if (!msg.startsWith("[FORWARDED]")) {
         if (socket2Client && socket2Client.readyState === WebSocket.OPEN) {

@@ -7,6 +7,7 @@ import {
   createModeUserAccountslIfNotExist,
   createModeWalletslIfNotExist,
 } from "./Services/collection.js";
+import insertUserAndWalletData from "./Services/insertion.js";
 import fetchUsers from "./Controllers/fetchAll.js";
 
 dotenv.config();
@@ -28,6 +29,7 @@ async function initializeApp() {
 
     await createModeUserAccountslIfNotExist();
     await createModeWalletslIfNotExist();
+    await insertUserAndWalletData();
 
     await fetchUsers();
   } catch (error) {
