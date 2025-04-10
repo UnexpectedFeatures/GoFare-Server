@@ -24,6 +24,7 @@ import {
 } from "./Services/firebaseSync.js";
 import startSocket1 from "./Websockets/serverSocket1.js";
 import startSocket2 from "./Websockets/serverSocket2.js";
+import runSimulation from "./Services/trainRunner.js";
 
 dotenv.config();
 const app = express();
@@ -47,6 +48,8 @@ async function initializeApp() {
     await createTableTransaction();
     await createTableTrainCurrent();
     await createTableAdminAccount();
+
+    await runSimulation();
 
     console.log("Tables have been created or checked.");
 
