@@ -7,6 +7,26 @@ const trainSimulator = {
     isRunning: false,
     intervalId: null,
     currentRoute: null,
+    wsClients: new Set(),
+  },
+
+  addWebSocketClient(ws) {
+    this.currentState.wsClients.add(ws);
+    ws.on("close", () => {
+      this.currentState.wsClients.delete(ws);
+    });
+  },
+
+  removeWebSocketClient(ws) {
+    this.currentState.wsClients.delete(ws);
+  },
+
+  broadcast(message) {
+    this.currentState.wsClients.forEach((client) => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(message);
+      }
+    });
   },
 
   async init(routeId) {
@@ -95,6 +115,19 @@ const trainSimulator = {
     const { currentStopIndex } = this.currentState;
     const currentStop = stops[currentStopIndex];
 
+    const arrivalMessage = JSON.stringify({
+      type: "ARRIVAL",
+      data: {
+        stopName: currentStop.name,
+        stopIndex: currentStopIndex,
+        totalStops: stops.length,
+        price: currentStop.price || null,
+        timestamp: new Date().toLocaleString(),
+      },
+    });
+
+    this.broadcast(arrivalMessage);
+
     console.log(`\nNow arriving at: ${currentStop.name}`);
     console.log(`Stop ${currentStopIndex + 1} of ${stops.length}`);
     if (currentStop.price) {
@@ -115,7 +148,7 @@ const trainSimulator = {
         stopId: currentStop.id,
         stopName: currentStop.name,
         stopIndex: currentStopIndex,
-        timestamp: Date.now(),
+        timestamp: new Date().toLocaleString(),
         price: currentStop.price || null,
       });
 
@@ -142,6 +175,7 @@ const trainSimulator = {
     return {
       ...this.currentState,
       intervalId: undefined,
+      wsClients: undefined,
     };
   },
 };
