@@ -78,12 +78,12 @@ export async function insertUserData(userId, userData) {
 }
 
 export async function insertWalletData(userId, walletData) {
-  const walletsRef = db.ref(`ClientReference/${userId}/wallets`);
+  const walletsRef = db.ref(`ClientReference/${userId}/wallet`);
   const snapshot = await walletsRef.once("value");
 
   if (!snapshot.exists()) {
     console.log(
-      `Wallet path 'ClientReference/${userId}/wallets' does not exist, creating wallet...`
+      `Wallet path 'ClientReference/${userId}/wallet' does not exist, creating wallet...`
     );
     await walletsRef.set(walletData);
     console.log(`Wallet created for user ${userId}`);

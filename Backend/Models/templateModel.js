@@ -26,7 +26,7 @@ export async function createModedevTemplatelIfNotExist() {
 }
 
 export async function createModeWalletslIfNotExist() {
-  const ref = db.ref("devTemplate/userTemplate/wallets");
+  const ref = db.ref("devTemplate/userTemplate/wallet");
   const snapshot = await ref.once("value");
 
   if (!snapshot.exists()) {
