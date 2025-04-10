@@ -1,0 +1,263 @@
+import { UserAccount } from "../Models/userAccountModel.js";
+import Wallet from "../Models/walletModel.js";
+import TrainRoute from "../Models/trainRouteModel.js";
+import db from "../database.js";
+import fdb from "../fdatabase.js";
+import Current from "../Models/currentModel.js";
+import { clearInterval } from "timers";
+
+let syncInterval;
+let isSyncing = false;
+
+let allSyncInterval;
+let isAllSyncing = false;
+
+async function syncCurrentLocationFromFirebase() {
+  if (isSyncing) {
+    console.log("Sync already in progress, skipping this interval");
+    return;
+  }
+
+  isSyncing = true;
+  const startTime = Date.now();
+
+  try {
+    console.log("Starting location sync...");
+    const snapshot = await fdb
+      .ref("trainSimulation/currentPosition")
+      .once("value");
+    const currentPosition = snapshot.val();
+
+    if (!currentPosition) {
+      console.warn("No current position data in Firebase");
+      return null;
+    }
+
+    const stopName = currentPosition.stopName;
+    if (!stopName) {
+      console.warn("Current position has no stopName");
+      return null;
+    }
+
+    const [currentRecord] = await Current.upsert({
+      Current_id: 1,
+      Location_Now: stopName,
+    });
+
+    const duration = Date.now() - startTime;
+    console.log(`Synced location (${duration}ms): ${stopName}`);
+    return currentRecord;
+  } catch (error) {
+    console.error("Sync failed:", error);
+    throw error;
+  } finally {
+    isSyncing = false;
+  }
+}
+
+async function syncAllFirebaseUsersToSequelize() {
+  try {
+    await db.sync();
+
+    const snapshot = await fdb.ref("ClientReference").once("value");
+    const firebaseUsers = snapshot.val();
+
+    if (!firebaseUsers) {
+      console.log("No users found in Firebase");
+      return [];
+    }
+
+    const results = [];
+
+    for (const [userId, userData] of Object.entries(firebaseUsers)) {
+      try {
+        const result = await syncSingleUser(userData);
+        results.push(result);
+      } catch (error) {
+        console.error(`Error syncing user ${userId}:`, error);
+      }
+    }
+
+    console.log(`Successfully synced ${results.length} users`);
+    return results;
+  } catch (error) {
+    console.error("Error in syncAllFirebaseUsersToSequelize:", error);
+    throw error;
+  }
+}
+
+async function syncSingleUser(firebaseData) {
+  try {
+    const userData = {
+      email: firebaseData.email,
+      firstName: firebaseData.firstName,
+      middleName: firebaseData.middleName,
+      lastName: firebaseData.lastName,
+      rfid: firebaseData.rfid,
+      password: generateSecurePassword(firebaseData.rfid),
+      age: firebaseData.age,
+      contactNumber: firebaseData.contactNumber,
+      gender: firebaseData.gender,
+      address: firebaseData.address,
+    };
+
+    const [user, userCreated] = await UserAccount.findOrCreate({
+      where: { rfid: userData.rfid },
+      defaults: userData,
+    });
+
+    if (!userCreated) {
+      await user.update(userData);
+    }
+
+    const walletData = {
+      balance: parseFloat(firebaseData.wallet.balance) || 0,
+      currency: firebaseData.wallet.currency || "PHP",
+      loanedAmount: parseFloat(firebaseData.wallet.loanedAmount) || 0,
+      status: firebaseData.wallet.status || "default",
+      Wallet_id: user.userId,
+    };
+
+    const [wallet, walletCreated] = await Wallet.findOrCreate({
+      where: { Wallet_id: user.userId },
+      defaults: walletData,
+    });
+
+    if (!walletCreated) {
+      await wallet.update(walletData);
+    }
+
+    console.log(`Successfully synced data for user ${user.userId}`);
+    return { user, wallet, userCreated, walletCreated };
+  } catch (error) {
+    console.error("Error syncing user:", error);
+    throw error;
+  }
+}
+
+async function syncAllTrainRoutes() {
+  try {
+    await TrainRoute.sync({ alter: true });
+
+    const snapshot = await fdb.ref("trainStations").once("value");
+    const firebaseRoutes = snapshot.val();
+
+    if (!firebaseRoutes) {
+      console.log("No train routes found in Firebase");
+      return [];
+    }
+
+    const results = [];
+
+    for (const [routeKey, routeStops] of Object.entries(firebaseRoutes)) {
+      try {
+        const routeNumber = parseInt(routeKey.replace("route", ""));
+
+        for (const [stopKey, stopData] of Object.entries(routeStops)) {
+          try {
+            const stopNumber = parseInt(stopKey.replace("Stop ", ""));
+
+            const [routeStop, created] = await TrainRoute.upsert({
+              TrainRoute_Location: stopData.name,
+              Location_price: parseInt(stopData.price),
+              Route_Number: routeNumber,
+              Stop_Number: stopNumber,
+            });
+
+            results.push({
+              route: routeNumber,
+              stop: stopNumber,
+              location: stopData.name,
+              created,
+              id: routeStop.TrainRoute_id,
+            });
+          } catch (error) {
+            console.error(
+              `Error syncing stop ${stopKey} in route ${routeKey}:`,
+              error
+            );
+          }
+        }
+      } catch (error) {
+        console.error(`Error processing route ${routeKey}:`, error);
+      }
+    }
+
+    console.log(`Successfully synced ${results.length} train route stops`);
+    return results;
+  } catch (error) {
+    console.error("Error in syncAllTrainRoutes:", error);
+    throw error;
+  }
+}
+
+async function allSync() {
+  console.log("Starting full sync...");
+
+  try {
+    const [users, routes, location] = await Promise.all([
+      syncAllFirebaseUsersToSequelize(),
+      syncAllTrainRoutes(),
+      syncCurrentLocationFromFirebase(),
+    ]);
+
+    console.log(`→ Users synced: ${users.length}`);
+    console.log(`→ Train routes synced: ${routes.length}`);
+    console.log(
+      `→ Current location: ${location?.Location_Now || "Not available"}`
+    );
+
+    return { users, routes, location };
+  } catch (error) {
+    console.error("Error during full sync:", error);
+    throw error;
+  }
+}
+
+function startAllSync(interval = 5000) {
+  stopAllSync();
+
+  allSync().catch((e) => console.error("Initial allSync error:", e));
+
+  allSyncInterval = setInterval(async () => {
+    if (isAllSyncing) {
+      console.log("AllSync already in progress, skipping this interval");
+      return;
+    }
+
+    isAllSyncing = true;
+    try {
+      await allSync();
+    } catch (error) {
+      console.error("Periodic allSync error:", error);
+    } finally {
+      isAllSyncing = false;
+    }
+  }, interval);
+
+  console.log(`Started all syncing every ${interval / 1000} seconds`);
+}
+
+function stopAllSync() {
+  if (allSyncInterval) {
+    clearInterval(allSyncInterval);
+    allSyncInterval = null;
+    console.log("Stopped all syncing");
+  }
+}
+
+function generateSecurePassword(rfid) {
+  return `${rfid}_${Math.random().toString(36).slice(-8)}`;
+}
+
+export {
+  syncAllFirebaseUsersToSequelize,
+  syncSingleUser,
+  syncAllTrainRoutes,
+  syncCurrentLocationFromFirebase,
+  allSync,
+  startAllSync,
+  stopAllSync,
+};
+
+startAllSync();
