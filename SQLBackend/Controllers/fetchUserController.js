@@ -60,16 +60,6 @@ async function fetchUser(ws, rfidMessage) {
       console.log(`Updated Firebase wallet for RFID ${rfid}`);
     } else {
       console.log(`RFID ${rfid} not found in ClientReference`);
-      // const newRef = clientRef.push();
-      // await newRef.set({
-      //   rfid: rfid,
-      //   wallet: {
-      //     balance: wallet.balance,
-      //     status: wallet.status,
-      //     loanedAmount: wallet.loanedAmount,
-      //     lastUpdated: new Date().toISOString()
-      //   }
-      // });
     }
 
     const currentLocation = await Current.findOne({
@@ -206,25 +196,35 @@ Wallet Status: Loaned
         `.trim();
       }
     } else {
-      await Passenger.create({
-        User: user.userId,
-        Rfid: user.rfid,
-        PickUp: currentLocation.Location_Now,
-        Pick_Up_Amout: currentLocationDetails.Location_price,
-        Drop_Off: null,
-        Drop_Off_Amount: null,
-        amount: null,
-      });
+      if (wallet.status === "loaned") {
+        message = `
+ACCESS_DENIED:
+ID: ${user.userId}
+Name: ${user.firstName} ${user.middleName || ""} ${user.lastName}
+Reason: Wallet has outstanding loan (₱${wallet.loanedAmount})
+Please settle your loan before starting a new trip.
+        `.trim();
+      } else {
+        await Passenger.create({
+          User: user.userId,
+          Rfid: user.rfid,
+          PickUp: currentLocation.Location_Now,
+          Pick_Up_Amout: currentLocationDetails.Location_price,
+          Drop_Off: null,
+          Drop_Off_Amount: null,
+          amount: null,
+        });
 
-      message = `
+        message = `
 TRIP_STARTED:
 ID: ${user.userId}
 Name: ${user.firstName} ${user.middleName || ""} ${user.lastName}
 PickUp: ${currentLocation.Location_Now} (₱${
-        currentLocationDetails.Location_price
-      })
+          currentLocationDetails.Location_price
+        })
 DropOff: Pending
-      `.trim();
+        `.trim();
+      }
     }
 
     ws.send(message);
