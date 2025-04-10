@@ -1,4 +1,6 @@
 import db from "../database.js";
+import fetchLocation from "./fetchLocationController.js";
+import Transaction from "./transactionController.js";
 
 export default async function fetchUser(ws, message, wss) {
   try {
@@ -8,6 +10,7 @@ export default async function fetchUser(ws, message, wss) {
     }
 
     const rfid = message.replace("Card Scanned:", "").trim();
+    console.log("Processing RFID:", rfid);
 
     if (!rfid) {
       throw new Error("RFID is missing");
@@ -32,25 +35,42 @@ export default async function fetchUser(ws, message, wss) {
 
     let userData = null;
     snapshot.forEach((childSnapshot) => {
-      if (!userData) {
-        userData = childSnapshot.val();
-      }
+      userData = childSnapshot.val();
     });
 
-    if (!userData || userData.firstName === "") {
+    if (!userData || !userData.firstName) {
       throw new Error("User account is not properly configured");
     }
 
     console.log("RFID matched, user data:", userData);
+
+    const location = await fetchLocation();
+    if (!location) {
+      throw new Error("Could not retrieve location data");
+    }
+    console.log("Current location:", location);
+
     const successMessage = JSON.stringify({
-      type: "success",
-      message: "User found",
-      data: userData,
+      type: "user_found",
+      user: userData,
+      location: location,
+      timestamp: new Date().toISOString(),
     });
+
     ws.send(successMessage);
     broadcastToSocket1(wss, successMessage);
+
+    await Transaction(
+      ws,
+      {
+        user: userData,
+        location: location,
+        originalMessage: message,
+      },
+      wss
+    );
   } catch (error) {
-    console.error("Error processing message:", error);
+    console.error("Error in fetchUser:", error);
     const errorMessage = JSON.stringify({
       type: "error",
       message: error.message,
@@ -62,7 +82,6 @@ export default async function fetchUser(ws, message, wss) {
 
 function broadcastToSocket1(wss, message) {
   if (!wss) return;
-
   wss.clients.forEach((client) => {
     if (client.readyState === WebSocket.OPEN) {
       client.send(message);

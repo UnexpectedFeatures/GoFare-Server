@@ -8,6 +8,7 @@ import {
   createModeWalletslIfNotExist,
 } from "./Models/templateModel.js";
 import { createModelAdminIfNotExist } from "./Models/adminModel.js";
+import { createModelPassengerIfNotExist } from "./Models/passengerModel.js";
 import {
   createStationModelIfNotExist,
   createRoute1StationIfNotExist,
@@ -15,7 +16,6 @@ import {
 } from "./Models/stationModels.js";
 import { createTransactionModelIfNotExist } from "./Models/transactionsModel.js";
 import insertUserAndWalletData from "./Services/insertion.js";
-import fetchUsers from "./Controllers/fetchAll.js";
 import runSimulation from "./Services/train.js";
 
 dotenv.config();
@@ -40,13 +40,13 @@ async function initializeApp() {
     await createStationModelIfNotExist();
     await createTransactionModelIfNotExist();
     await createModelAdminIfNotExist();
+    await createModelPassengerIfNotExist();
     await createRoute1StationIfNotExist();
     await createRoute2StationIfNotExist();
 
     await insertUserAndWalletData();
 
     await runSimulation();
-    // await fetchUsers();
   } catch (error) {
     console.error(
       `${chalk.red("(Express)")} Error initializing the application:`,
