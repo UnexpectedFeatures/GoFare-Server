@@ -2,6 +2,7 @@ import { DataTypes, Model } from "sequelize";
 import db from "../database.js";
 import { UserAccount } from "./userAccountModel.js";
 import TrainRoute from "./trainRouteModel.js";
+import Transaction from "./transactionModel.js";
 
 class PassengerModel extends Model {}
 
@@ -48,6 +49,13 @@ const Passenger = PassengerModel.init(
     },
     amount: {
       type: DataTypes.INTEGER,
+    },
+    transaction_number: {
+      type: DataTypes.STRING,
+      references: {
+        model: Transaction,
+        key: "Transaction_Number",
+      },
     },
   },
   {

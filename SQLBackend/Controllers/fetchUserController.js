@@ -141,17 +141,27 @@ async function fetchUser(initiatingWs, rfidMessage, allClients) {
 
       console.log(`Processing payment - Fare: ₱${fare}`);
 
+      const transactionNumber = `TRX-${Date.now()}-${user.userId}`;
+      const currentBalance = parseFloat(wallet.balance);
+      const fareAmount = parseFloat(fare);
+      const newBalance = currentBalance - fareAmount;
+
+      const transaction = await Transaction.create({
+        Transaction_Number: transactionNumber,
+        User: user.userId,
+        Rfid: user.rfid,
+        discount: "0",
+        discount_Value: "0",
+        total: fare.toString(),
+      });
+
       await activeTrip.update({
         Drop_Off: currentLocation.Location_Now,
         Pick_Up_Amout: pickupLocationDetails.Location_price,
         Drop_Off_Amount: currentLocationDetails.Location_price,
         amount: fare,
+        transaction_number: transactionNumber,
       });
-
-      const currentBalance = parseFloat(wallet.balance);
-      const fareAmount = parseFloat(fare);
-      const transactionNumber = `TRX-${Date.now()}-${user.userId}`;
-      const newBalance = currentBalance - fareAmount;
 
       if (newBalance >= 0) {
         await wallet.update({
@@ -168,15 +178,6 @@ async function fetchUser(initiatingWs, rfidMessage, allClients) {
             lastUpdated: new Date().toISOString(),
           });
         }
-
-        const transaction = await Transaction.create({
-          Transaction_Number: transactionNumber,
-          User: user.userId,
-          Rfid: user.rfid,
-          discount: "0",
-          discount_Value: "0",
-          total: fare.toString(),
-        });
 
         const userTransactionsRef = transactionsRef.child(rfid);
         const transactionCountSnapshot = await userTransactionsRef.once(
@@ -232,14 +233,6 @@ async function fetchUser(initiatingWs, rfidMessage, allClients) {
             lastUpdated: new Date().toISOString(),
           });
         }
-
-        const transaction = await Transaction.create({
-          Transaction_Number: transactionNumber,
-          User: user.userId,
-          discount: "0",
-          discount_Value: "0",
-          total: fare.toString(),
-        });
 
         const userTransactionsRef = transactionsRef.child(rfid);
         const transactionCountSnapshot = await userTransactionsRef.once(

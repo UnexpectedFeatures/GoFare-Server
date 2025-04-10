@@ -44,10 +44,10 @@ async function initializeApp() {
     await createTableUserBanned();
     await createTableWallet();
     await createTableTrainRoute();
-    await createTablePassenger();
     await createTableTransaction();
     await createTableTrainCurrent();
     await createTableAdminAccount();
+    await createTablePassenger();
 
     await runSimulation();
 

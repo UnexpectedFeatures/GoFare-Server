@@ -14,6 +14,7 @@ const Transaction = TransactionModel.init(
     },
     Transaction_Number: {
       type: DataTypes.STRING,
+      unique: true,
     },
     User: {
       type: DataTypes.INTEGER,
