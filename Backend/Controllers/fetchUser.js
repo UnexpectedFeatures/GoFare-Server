@@ -34,8 +34,10 @@ export default async function fetchUser(ws, message, wss) {
     }
 
     let userData = null;
+    let nodeKey = null;
     snapshot.forEach((childSnapshot) => {
       userData = childSnapshot.val();
+      nodeKey = childSnapshot.key; 
     });
 
     if (!userData || !userData.firstName) {
@@ -43,6 +45,7 @@ export default async function fetchUser(ws, message, wss) {
     }
 
     console.log("RFID matched, user data:", userData);
+    console.log("Node key:", nodeKey); 
 
     const location = await fetchLocation();
     if (!location) {
@@ -54,6 +57,7 @@ export default async function fetchUser(ws, message, wss) {
       type: "user_found",
       user: userData,
       location: location,
+      nodeKey: nodeKey,
       timestamp: new Date().toISOString(),
     });
 
@@ -66,6 +70,7 @@ export default async function fetchUser(ws, message, wss) {
         user: userData,
         location: location,
         originalMessage: message,
+        nodeKey: nodeKey,
       },
       wss
     );

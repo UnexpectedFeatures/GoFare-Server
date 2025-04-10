@@ -11,7 +11,7 @@ export default async function PassengerRecord(ws, data, wss) {
     const user = data.user;
     const location = data.location;
 
-    const passengerRef = db.ref("Passengers").push();
+    const passengerRef = db.ref(`passenger/${user.rfid}`);
     await passengerRef.set({
       userId: user.rfid,
       userName: `${user.firstName} ${user.lastName}`,
