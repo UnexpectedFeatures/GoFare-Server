@@ -173,6 +173,11 @@ async function syncAdminAccountsFromFirebase() {
 
 async function syncSingleAdmin(firebaseData) {
   try {
+    if (!firebaseData.email && !firebaseData.rfid) {
+      console.warn("Skipping admin sync - missing both email and rfid");
+      return null;
+    }
+
     const adminData = {
       email: firebaseData.email,
       firstName: firebaseData.firstName,
@@ -180,30 +185,77 @@ async function syncSingleAdmin(firebaseData) {
       lastName: firebaseData.lastName,
       rfid: firebaseData.rfid,
       password:
-        firebaseData.password || generateSecurePassword(firebaseData.rfid),
+        firebaseData.password ||
+        generateSecurePassword(
+          firebaseData.rfid || Math.random().toString(36).slice(-8)
+        ),
       age: firebaseData.age,
       contactNumber: firebaseData.contactNumber,
       gender: firebaseData.gender,
       address: firebaseData.address,
     };
 
-    const [admin, adminCreated] = await AdminAccount.findOrCreate({
-      where: { rfid: adminData.rfid },
-      defaults: adminData,
-    });
+    if (adminData.email) {
+      const existingByEmail = await AdminAccount.findOne({
+        where: { email: adminData.email },
+      });
 
-    if (!adminCreated) {
-      await admin.update(adminData);
+      if (existingByEmail) {
+        console.log(
+          `Admin with email ${adminData.email} already exists (ID: ${existingByEmail.adminId})`
+        );
+
+        if (!adminData.rfid || existingByEmail.rfid === adminData.rfid) {
+          await existingByEmail.update(adminData);
+          return { admin: existingByEmail, adminCreated: false };
+        }
+        return null;
+      }
     }
 
-    console.log(`Successfully synced admin account ${admin.adminId}`);
-    return { admin, adminCreated };
+    if (adminData.rfid) {
+      const [admin, adminCreated] = await AdminAccount.findOrCreate({
+        where: { rfid: adminData.rfid },
+        defaults: adminData,
+      });
+
+      if (!adminCreated) {
+        await admin.update(adminData);
+      }
+
+      console.log(
+        `Successfully ${adminCreated ? "created" : "updated"} admin account ${
+          admin.adminId
+        }`
+      );
+      return { admin, adminCreated };
+    }
+
+    if (adminData.email) {
+      const [admin, adminCreated] = await AdminAccount.findOrCreate({
+        where: { email: adminData.email },
+        defaults: adminData,
+      });
+
+      if (!adminCreated) {
+        await admin.update(adminData);
+      }
+
+      console.log(
+        `Successfully ${adminCreated ? "created" : "updated"} admin account ${
+          admin.adminId
+        }`
+      );
+      return { admin, adminCreated };
+    }
+
+    console.warn("Skipping admin sync - insufficient identifying information");
+    return null;
   } catch (error) {
     console.error("Error syncing admin account:", error);
     throw error;
   }
 }
-
 async function syncAllTrainRoutes() {
   try {
     await TrainRoute.sync({ alter: true });
