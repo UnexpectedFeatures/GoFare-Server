@@ -6,12 +6,12 @@ import Transaction from "../Models/transactionModel.js";
 import Wallet from "../Models/walletModel.js";
 import fdb from "../fdatabase.js";
 
-async function fetchUser(ws, rfidMessage) {
+async function fetchUser(initiatingWs, rfidMessage, allClients) {
   try {
     const rfid = rfidMessage.trim();
 
     if (!rfid) {
-      ws.send("ERROR: RFID number is required.");
+      broadcastToAll(null, "ERROR: RFID number is required.", allClients);
       return;
     }
 
@@ -21,7 +21,11 @@ async function fetchUser(ws, rfidMessage) {
     });
 
     if (!user) {
-      ws.send("NOT_FOUND: No user found with the provided RFID.");
+      broadcastToAll(
+        null,
+        "NOT_FOUND: No user found with the provided RFID.",
+        allClients
+      );
       return;
     }
 
@@ -30,7 +34,11 @@ async function fetchUser(ws, rfidMessage) {
     });
 
     if (!wallet) {
-      ws.send("ERROR: Wallet not found for this user.");
+      broadcastToAll(
+        null,
+        "ERROR: Wallet not found for this user.",
+        allClients
+      );
       return;
     }
 
@@ -68,7 +76,11 @@ async function fetchUser(ws, rfidMessage) {
     });
 
     if (!currentLocation) {
-      ws.send("ERROR: Current location not available.");
+      broadcastToAll(
+        null,
+        "ERROR: Current location not available.",
+        allClients
+      );
       return;
     }
 
@@ -77,7 +89,11 @@ async function fetchUser(ws, rfidMessage) {
     });
 
     if (!currentLocationDetails) {
-      ws.send("ERROR: Current location details not found.");
+      broadcastToAll(
+        null,
+        "ERROR: Current location details not found.",
+        allClients
+      );
       return;
     }
 
@@ -95,7 +111,11 @@ async function fetchUser(ws, rfidMessage) {
       });
 
       if (!pickupLocationDetails) {
-        ws.send("ERROR: Pickup location details not found.");
+        broadcastToAll(
+          null,
+          "ERROR: Pickup location details not found.",
+          allClients
+        );
         return;
       }
 
@@ -142,16 +162,16 @@ async function fetchUser(ws, rfidMessage) {
 
         console.log(`Payment successful. New balance: ₱${newBalance}`);
         message = `
-TRIP_COMPLETED:
-ID: ${user.userId}
-Name: ${user.firstName} ${user.middleName || ""} ${user.lastName}
-PickUp: ${activeTrip.PickUp} (₱${pickupLocationDetails.Location_price})
-DropOff: ${currentLocation.Location_Now} (₱${
+  TRIP_COMPLETED:
+  ID: ${user.userId}
+  Name: ${user.firstName} ${user.middleName || ""} ${user.lastName}
+  PickUp: ${activeTrip.PickUp} (₱${pickupLocationDetails.Location_price})
+  DropOff: ${currentLocation.Location_Now} (₱${
           currentLocationDetails.Location_price
         })
-Fare: ₱${fare}
-Payment: Deducted from wallet
-New Balance: ₱${newBalance}
+  Fare: ₱${fare}
+  Payment: Deducted from wallet
+  New Balance: ₱${newBalance}
         `.trim();
       } else {
         const loanAmount = Math.abs(newBalance);
@@ -182,27 +202,27 @@ New Balance: ₱${newBalance}
           `Insufficient funds. New balance: ₱${newBalance}, Loan: ₱${loanAmount}`
         );
         message = `
-TRIP_COMPLETED:
-ID: ${user.userId}
-Name: ${user.firstName} ${user.middleName || ""} ${user.lastName}
-PickUp: ${activeTrip.PickUp} (₱${pickupLocationDetails.Location_price})
-DropOff: ${currentLocation.Location_Now} (₱${
+  TRIP_COMPLETED:
+  ID: ${user.userId}
+  Name: ${user.firstName} ${user.middleName || ""} ${user.lastName}
+  PickUp: ${activeTrip.PickUp} (₱${pickupLocationDetails.Location_price})
+  DropOff: ${currentLocation.Location_Now} (₱${
           currentLocationDetails.Location_price
         })
-Fare: ₱${fare}
-Payment: Insufficient funds - New balance: ₱${newBalance}
-Loan Amount: ₱${loanAmount}
-Wallet Status: Loaned
+  Fare: ₱${fare}
+  Payment: Insufficient funds - New balance: ₱${newBalance}
+  Loan Amount: ₱${loanAmount}
+  Wallet Status: Loaned
         `.trim();
       }
     } else {
       if (wallet.status === "loaned") {
         message = `
-ACCESS_DENIED:
-ID: ${user.userId}
-Name: ${user.firstName} ${user.middleName || ""} ${user.lastName}
-Reason: Wallet has outstanding loan (₱${wallet.loanedAmount})
-Please settle your loan before starting a new trip.
+  ACCESS_DENIED:
+  ID: ${user.userId}
+  Name: ${user.firstName} ${user.middleName || ""} ${user.lastName}
+  Reason: Wallet has outstanding loan (₱${wallet.loanedAmount})
+  Please settle your loan before starting a new trip.
         `.trim();
       } else {
         await Passenger.create({
@@ -216,23 +236,38 @@ Please settle your loan before starting a new trip.
         });
 
         message = `
-TRIP_STARTED:
-ID: ${user.userId}
-Name: ${user.firstName} ${user.middleName || ""} ${user.lastName}
-PickUp: ${currentLocation.Location_Now} (₱${
+  TRIP_STARTED:
+  ID: ${user.userId}
+  Name: ${user.firstName} ${user.middleName || ""} ${user.lastName}
+  PickUp: ${currentLocation.Location_Now} (₱${
           currentLocationDetails.Location_price
         })
-DropOff: Pending
+  DropOff: Pending
         `.trim();
       }
     }
 
-    ws.send(message);
+    broadcastToAll(null, message, allClients);
     console.log(message);
   } catch (error) {
     console.error("Error processing user scan:", error);
-    ws.send("ERROR: An error occurred while processing the scan.");
+    broadcastToAll(
+      null,
+      "ERROR: An error occurred while processing the scan.",
+      allClients
+    );
   }
+}
+
+function broadcastToAll(senderWs, message, clientsSet) {
+  clientsSet.forEach((client) => {
+    if (
+      (!senderWs || client !== senderWs) &&
+      client.readyState === WebSocket.OPEN
+    ) {
+      client.send(message);
+    }
+  });
 }
 
 export default fetchUser;
