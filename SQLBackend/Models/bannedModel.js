@@ -10,6 +10,9 @@ const Banned = bannedModel.init(
       type: DataTypes.INTEGER,
       autoIncrement: true,
       primaryKey: true,
+    },
+    user_id: {
+      type: DataTypes.INTEGER,
       references: {
         model: UserAccount,
         key: "userId",

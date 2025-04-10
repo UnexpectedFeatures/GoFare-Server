@@ -10,6 +10,7 @@ import Transaction from "../Models/transactionModel.js";
 import TrainRoute from "../Models/trainRouteModel.js";
 import Current from "../Models/currentModel.js";
 import AdminAccount from "../Models/adminAccountsModel.js";
+import ArchiveAccount from "../Models/archiveModel.js";
 import "../Models/associations.js";
 
 async function createTableUserAccounts() {
@@ -104,6 +105,15 @@ async function createTableAdminAccount() {
   }
 }
 
+async function createTableArchiiveAccount() {
+  try {
+    await ArchiveAccount.sync({ alter: false });
+    console.log("Archive Account table is checked and updated if necessary");
+  } catch (error) {
+    console.error("Error checking/updating Archive Account table", error);
+  }
+}
+
 export {
   createTableUserAccounts,
   createTableSignInAccounts,
@@ -115,4 +125,5 @@ export {
   createTableTrainRoute,
   createTableTrainCurrent,
   createTableAdminAccount,
+  createTableArchiiveAccount,
 };
