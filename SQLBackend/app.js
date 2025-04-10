@@ -25,6 +25,7 @@ import {
 import startSocket1 from "./Websockets/serverSocket1.js";
 import startSocket2 from "./Websockets/serverSocket2.js";
 import runSimulation from "./Services/trainRunner.js";
+import startAdminSocket from "./Websockets/serverSocket3.js";
 
 dotenv.config();
 const app = express();
@@ -57,6 +58,7 @@ async function initializeApp() {
 
     startSocket1();
     startSocket2();
+    startAdminSocket();
 
     const server = app.listen(process.env.WS_PORT, () => {
       console.log(`App is listening on port: ${process.env.WS_PORT}`);
