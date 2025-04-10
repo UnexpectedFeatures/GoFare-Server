@@ -7,6 +7,7 @@ import {
   createModedevTemplatelIfNotExist,
   createModeWalletslIfNotExist,
 } from "./Models/templateModel.js";
+import { createModelAdminIfNotExist } from "./Models/adminModel.js";
 import {
   createStationModelIfNotExist,
   createRoute1StationIfNotExist,
@@ -38,6 +39,7 @@ async function initializeApp() {
     await createModeWalletslIfNotExist();
     await createStationModelIfNotExist();
     await createTransactionModelIfNotExist();
+    await createModelAdminIfNotExist();
     await createRoute1StationIfNotExist();
     await createRoute2StationIfNotExist();
 
