@@ -14,11 +14,13 @@ import {
   createTableTransaction,
   createTableTrainRoute,
   createTableTrainCurrent,
+  createTableAdminAccount,
 } from "./Services/tableCreate.js";
 import {
   syncAllFirebaseUsersToSequelize,
   syncAllTrainRoutes,
   syncCurrentLocationFromFirebase,
+  syncAdminAccountsFromFirebase,
 } from "./Services/firebaseSync.js";
 import startSocket1 from "./Websockets/serverSocket1.js";
 import startSocket2 from "./Websockets/serverSocket2.js";
@@ -44,6 +46,7 @@ async function initializeApp() {
     await createTablePassenger();
     await createTableTransaction();
     await createTableTrainCurrent();
+    await createTableAdminAccount();
 
     console.log("Tables have been created or checked.");
 

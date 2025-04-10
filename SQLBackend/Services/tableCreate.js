@@ -9,6 +9,7 @@ import Passenger from "../Models/passengerModel.js";
 import Transaction from "../Models/transactionModel.js";
 import TrainRoute from "../Models/trainRouteModel.js";
 import Current from "../Models/currentModel.js";
+import AdminAccount from "../Models/adminAccountsModel.js";
 import "../Models/associations.js";
 
 async function createTableUserAccounts() {
@@ -94,6 +95,15 @@ async function createTableTrainCurrent() {
   }
 }
 
+async function createTableAdminAccount() {
+  try {
+    await AdminAccount.sync({ alter: false });
+    console.log("Admin Account table is checked and updated if necessary");
+  } catch (error) {
+    console.error("Error checking/updating Admin Account table", error);
+  }
+}
+
 export {
   createTableUserAccounts,
   createTableSignInAccounts,
@@ -104,4 +114,5 @@ export {
   createTableTransaction,
   createTableTrainRoute,
   createTableTrainCurrent,
+  createTableAdminAccount,
 };

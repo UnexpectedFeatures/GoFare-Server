@@ -5,6 +5,7 @@ import db from "../database.js";
 import fdb from "../fdatabase.js";
 import Current from "../Models/currentModel.js";
 import { clearInterval } from "timers";
+import AdminAccount from "../Models/adminAccountsModel.js";
 
 let syncInterval;
 let isSyncing = false;
@@ -135,6 +136,74 @@ async function syncSingleUser(firebaseData) {
   }
 }
 
+async function syncAdminAccountsFromFirebase() {
+  try {
+    await db.sync();
+
+    const snapshot = await fdb.ref("adminAccounts").once("value");
+    const firebaseAdmins = snapshot.val();
+
+    if (!firebaseAdmins) {
+      console.log("No admin accounts found in Firebase");
+      return [];
+    }
+
+    const results = [];
+
+    const adminsToProcess = Array.isArray(firebaseAdmins)
+      ? firebaseAdmins.filter(Boolean)
+      : Object.values(firebaseAdmins).filter(Boolean);
+
+    for (const adminData of adminsToProcess) {
+      try {
+        const result = await syncSingleAdmin(adminData);
+        results.push(result);
+      } catch (error) {
+        console.error(`Error syncing admin account:`, error);
+      }
+    }
+
+    console.log(`Successfully synced ${results.length} admin accounts`);
+    return results;
+  } catch (error) {
+    console.error("Error in syncAdminAccountsFromFirebase:", error);
+    throw error;
+  }
+}
+
+async function syncSingleAdmin(firebaseData) {
+  try {
+    const adminData = {
+      email: firebaseData.email,
+      firstName: firebaseData.firstName,
+      middleName: firebaseData.middleName,
+      lastName: firebaseData.lastName,
+      rfid: firebaseData.rfid,
+      password:
+        firebaseData.password || generateSecurePassword(firebaseData.rfid),
+      age: firebaseData.age,
+      contactNumber: firebaseData.contactNumber,
+      gender: firebaseData.gender,
+      address: firebaseData.address,
+    };
+
+    const [admin, adminCreated] = await AdminAccount.findOrCreate({
+      where: { rfid: adminData.rfid },
+      defaults: adminData,
+    });
+
+    if (!adminCreated) {
+      await admin.update(adminData);
+    }
+
+    console.log(`Successfully synced admin account ${admin.adminId}`);
+    return { admin, adminCreated };
+  } catch (error) {
+    console.error("Error syncing admin account:", error);
+    throw error;
+  }
+}
+
 async function syncAllTrainRoutes() {
   try {
     await TrainRoute.sync({ alter: true });
@@ -195,10 +264,11 @@ async function allSync() {
   console.log("Starting full sync...");
 
   try {
-    const [users, routes, location] = await Promise.all([
+    const [users, routes, location, admins] = await Promise.all([
       syncAllFirebaseUsersToSequelize(),
       syncAllTrainRoutes(),
       syncCurrentLocationFromFirebase(),
+      syncAdminAccountsFromFirebase(),
     ]);
 
     console.log(`→ Users synced: ${users.length}`);
@@ -207,7 +277,7 @@ async function allSync() {
       `→ Current location: ${location?.Location_Now || "Not available"}`
     );
 
-    return { users, routes, location };
+    return { users, routes, location, admins };
   } catch (error) {
     console.error("Error during full sync:", error);
     throw error;
@@ -258,6 +328,8 @@ export {
   allSync,
   startAllSync,
   stopAllSync,
+  syncAdminAccountsFromFirebase,
+  syncSingleAdmin,
 };
 
 startAllSync();
