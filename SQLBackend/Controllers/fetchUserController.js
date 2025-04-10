@@ -119,9 +119,25 @@ async function fetchUser(initiatingWs, rfidMessage, allClients) {
         return;
       }
 
-      const fare =
-        currentLocationDetails.Location_price +
-        pickupLocationDetails.Location_price;
+      const routeSegmentPrices = await TrainRoute.findAll({
+        where: {
+          Route_Number: pickupLocationDetails.Route_Number,
+        },
+        order: [["Stop_Number", "ASC"]],
+      });
+
+      const pickupStopIndex = routeSegmentPrices.findIndex(
+        (route) => route.TrainRoute_Location === activeTrip.PickUp
+      );
+      const dropOffStopIndex = routeSegmentPrices.findIndex(
+        (route) => route.TrainRoute_Location === currentLocation.Location_Now
+      );
+
+      let fare = 0;
+      for (let i = pickupStopIndex; i <= dropOffStopIndex; i++) {
+        fare += routeSegmentPrices[i].Location_price;
+      }
+
       console.log(`Processing payment - Fare: ₱${fare}`);
 
       await activeTrip.update({
