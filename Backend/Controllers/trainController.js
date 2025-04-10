@@ -114,6 +114,8 @@ const trainSimulator = {
     const { stops } = this.currentState.currentRoute;
     const { currentStopIndex } = this.currentState;
     const currentStop = stops[currentStopIndex];
+    const dateTime = new Date().toLocaleString();
+    const [date, time] = dateTime.split(", ");
 
     const arrivalMessage = JSON.stringify({
       type: "ARRIVAL",
@@ -122,7 +124,8 @@ const trainSimulator = {
         stopIndex: currentStopIndex,
         totalStops: stops.length,
         price: currentStop.price || null,
-        timestamp: new Date().toLocaleString(),
+        date: date,
+        time: time,
       },
     });
 
@@ -141,14 +144,17 @@ const trainSimulator = {
     try {
       const { currentRoute, currentStopIndex } = this.currentState;
       const currentStop = currentRoute.stops[currentStopIndex];
+      const dateTime = new Date().toLocaleString();
+      const [date, time] = dateTime.split(", ");
 
-      await db.ref(`trainSimulation/currentPosition`).set({
+      await db.ref("trainSimulation/currentPosition").set({
         routeId: currentRoute.id,
         routeName: currentRoute.name,
         stopId: currentStop.id,
         stopName: currentStop.name,
         stopIndex: currentStopIndex,
-        timestamp: new Date().toLocaleString(),
+        date: date,
+        time: time,
         price: currentStop.price || null,
       });
 
