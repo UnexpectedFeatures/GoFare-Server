@@ -12,7 +12,6 @@ async function fetchUser(ws, rfidMessage) {
       return;
     }
 
-    // Find user by RFID
     const user = await UserAccount.findOne({
       where: { rfid },
       attributes: { exclude: ["password"] },
@@ -23,7 +22,6 @@ async function fetchUser(ws, rfidMessage) {
       return;
     }
 
-    // Get current location
     const currentLocation = await Current.findOne({
       order: [["createdAt", "DESC"]],
       limit: 1,
@@ -34,7 +32,6 @@ async function fetchUser(ws, rfidMessage) {
       return;
     }
 
-    // Get current location details including price
     const currentLocationDetails = await TrainRoute.findOne({
       where: { TrainRoute_Location: currentLocation.Location_Now },
     });
@@ -44,7 +41,6 @@ async function fetchUser(ws, rfidMessage) {
       return;
     }
 
-    // Check if user has an active trip (pickup but no drop-off)
     const activeTrip = await Passenger.findOne({
       where: {
         User: user.userId,
@@ -54,7 +50,6 @@ async function fetchUser(ws, rfidMessage) {
 
     let message;
     if (activeTrip) {
-      // Get pickup location details including price
       const pickupLocationDetails = await TrainRoute.findOne({
         where: { TrainRoute_Location: activeTrip.PickUp },
       });
@@ -64,13 +59,10 @@ async function fetchUser(ws, rfidMessage) {
         return;
       }
 
-      // Calculate fare based on the difference between drop-off and pickup amounts
-      const fare = Math.abs(
-        currentLocationDetails.Location_price -
-          pickupLocationDetails.Location_price
-      );
+      const fare =
+        currentLocationDetails.Location_price +
+        pickupLocationDetails.Location_price;
 
-      // Update drop-off location and amounts for existing trip
       await activeTrip.update({
         Drop_Off: currentLocation.Location_Now,
         Pick_Up_Amout: pickupLocationDetails.Location_price,
@@ -89,7 +81,6 @@ async function fetchUser(ws, rfidMessage) {
   Fare: ₱${fare}
       `.trim();
     } else {
-      // Create new trip with pickup location and price
       await Passenger.create({
         User: user.userId,
         Rfid: user.rfid,

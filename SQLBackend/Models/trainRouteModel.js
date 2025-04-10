@@ -12,7 +12,6 @@ const TrainRoute = TrainRouteModel.init(
     },
     TrainRoute_Location: {
       type: DataTypes.STRING,
-      unique: true,
     },
     Location_price: {
       type: DataTypes.INTEGER,
