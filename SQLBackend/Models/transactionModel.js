@@ -2,6 +2,7 @@ import { DataTypes, Model } from "sequelize";
 import db from "../database.js";
 import { UserAccount } from "./userAccountModel.js";
 import "../Models/associations.js";
+
 class TransactionModel extends Model {}
 
 const Transaction = TransactionModel.init(
@@ -19,6 +20,13 @@ const Transaction = TransactionModel.init(
       references: {
         model: UserAccount,
         key: "userId",
+      },
+    },
+    Rfid: {
+      type: DataTypes.STRING,
+      references: {
+        model: UserAccount,
+        key: "rfid",
       },
     },
     discount: {

@@ -47,6 +47,7 @@ async function fetchUser(initiatingWs, rfidMessage, allClients) {
     );
 
     const clientRef = fdb.ref("ClientReference");
+    const transactionsRef = fdb.ref("Transactions");
 
     const snapshot = await clientRef
       .orderByChild("rfid")
@@ -168,11 +169,37 @@ async function fetchUser(initiatingWs, rfidMessage, allClients) {
           });
         }
 
-        await Transaction.create({
+        const transaction = await Transaction.create({
           Transaction_Number: transactionNumber,
           User: user.userId,
+          Rfid: user.rfid,
           discount: "0",
           discount_Value: "0",
+          total: fare.toString(),
+        });
+
+        const userTransactionsRef = transactionsRef.child(rfid);
+        const transactionCountSnapshot = await userTransactionsRef.once(
+          "value"
+        );
+        const transactionCount = transactionCountSnapshot.numChildren();
+        const newTransactionKey = `transaction${transactionCount + 1}`;
+
+        await userTransactionsRef.child(newTransactionKey).set({
+          transactionNumber: transactionNumber,
+          balance: currentBalance.toString(),
+          date: new Date().toLocaleDateString("en-US"),
+          discount: false,
+          dropoff: currentLocation.Location_Now,
+          loaned: false,
+          pickup: activeTrip.PickUp,
+          remainingBalance: newBalance.toString(),
+          time: new Date().toLocaleTimeString("en-US", {
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+            hour12: true,
+          }),
           total: fare.toString(),
         });
 
@@ -206,11 +233,35 @@ async function fetchUser(initiatingWs, rfidMessage, allClients) {
           });
         }
 
-        await Transaction.create({
+        const transaction = await Transaction.create({
           Transaction_Number: transactionNumber,
           User: user.userId,
           discount: "0",
           discount_Value: "0",
+          total: fare.toString(),
+        });
+
+        const userTransactionsRef = transactionsRef.child(rfid);
+        const transactionCountSnapshot = await userTransactionsRef.once(
+          "value"
+        );
+        const transactionCount = transactionCountSnapshot.numChildren();
+        const newTransactionKey = `transaction${transactionCount + 1}`;
+
+        await userTransactionsRef.child(newTransactionKey).set({
+          balance: currentBalance.toString(),
+          date: new Date().toLocaleDateString("en-US"),
+          discount: false,
+          dropoff: currentLocation.Location_Now,
+          loaned: true,
+          pickup: activeTrip.PickUp,
+          remainingBalance: newBalance.toString(),
+          time: new Date().toLocaleTimeString("en-US", {
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+            hour12: true,
+          }),
           total: fare.toString(),
         });
 
