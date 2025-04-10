@@ -1,6 +1,9 @@
 import { WebSocketServer } from "ws";
 import dotenv from "dotenv";
 import handleRegisterAdmin from "../Controllers/AdminLogic/registerController.js";
+import fetchAdmins from "../Controllers/AdminLogic/fetchAdmin.js";
+import handleDelete from "../Controllers/AdminLogic/handleDelete.js";
+
 
 dotenv.config();
 
@@ -11,12 +14,9 @@ function startAdminSocket() {
   wss.on("connection", (ws) => {
     ws.on("message", (message) => {
       const msg = message.toString();
-      if (msg.startsWith("[FORWARDED]")) {
-        handleForward(ws, msg);
-      } else if (msg.startsWith("[NOTIFY]")) {
-        handleNotify(ws, msg);
-      } else if (msg.startsWith("[Register]")) {
-        handleRegisterAdmin();
+
+      if (msg.startsWith("[Register]")) {
+        handleRegisterAdmin(ws, msg);
       } else if (msg.startsWith("[Delete]")) {
         handleDelete(ws, msg);
       } else if (msg.startsWith("[Suspend]")) {
