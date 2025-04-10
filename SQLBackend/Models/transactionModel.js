@@ -1,7 +1,7 @@
 import { DataTypes, Model } from "sequelize";
 import db from "../database.js";
 import { UserAccount } from "./userAccountModel.js";
-
+import "../Models/associations.js";
 class TransactionModel extends Model {}
 
 const Transaction = TransactionModel.init(

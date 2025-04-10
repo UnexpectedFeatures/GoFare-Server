@@ -2,6 +2,8 @@ import { UserAccount } from "../Models/userAccountModel.js";
 import Current from "../Models/currentModel.js";
 import Passenger from "../Models/passengerModel.js";
 import TrainRoute from "../Models/trainRouteModel.js";
+import Transaction from "../Models/transactionModel.js";
+import Wallet from "../Models/walletModel.js";
 
 async function fetchUser(ws, rfidMessage) {
   try {
@@ -21,6 +23,19 @@ async function fetchUser(ws, rfidMessage) {
       ws.send("NOT_FOUND: No user found with the provided RFID.");
       return;
     }
+
+    const wallet = await Wallet.findOne({
+      where: { Wallet_id: user.userId },
+    });
+
+    if (!wallet) {
+      ws.send("ERROR: Wallet not found for this user.");
+      return;
+    }
+
+    console.log(
+      `Initial wallet balance: ₱${wallet.balance}, Status: ${wallet.status}`
+    );
 
     const currentLocation = await Current.findOne({
       order: [["createdAt", "DESC"]],
@@ -63,6 +78,8 @@ async function fetchUser(ws, rfidMessage) {
         currentLocationDetails.Location_price +
         pickupLocationDetails.Location_price;
 
+      console.log(`Processing payment - Fare: ₱${fare}`);
+
       await activeTrip.update({
         Drop_Off: currentLocation.Location_Now,
         Pick_Up_Amout: pickupLocationDetails.Location_price,
@@ -70,16 +87,74 @@ async function fetchUser(ws, rfidMessage) {
         amount: fare,
       });
 
-      message = `
+      const currentBalance = parseFloat(wallet.balance);
+      const fareAmount = parseFloat(fare);
+
+      const transactionNumber = `TRX-${Date.now()}-${user.userId}`;
+
+      const newBalance = currentBalance - fareAmount;
+
+      if (newBalance >= 0) {
+        await wallet.update({
+          balance: newBalance.toString(),
+          status: "active",
+          loanedAmount: "0",
+        });
+
+        await Transaction.create({
+          Transaction_Number: transactionNumber,
+          User: user.userId,
+          discount: "0",
+          discount_Value: "0",
+          total: fare.toString(),
+        });
+
+        console.log(`Payment successful. New balance: ₱${newBalance}`);
+        message = `
   TRIP_COMPLETED:
   ID: ${user.userId}
   Name: ${user.firstName} ${user.middleName || ""} ${user.lastName}
   PickUp: ${activeTrip.PickUp} (₱${pickupLocationDetails.Location_price})
   DropOff: ${currentLocation.Location_Now} (₱${
-        currentLocationDetails.Location_price
-      })
+          currentLocationDetails.Location_price
+        })
   Fare: ₱${fare}
-      `.trim();
+  Payment: Deducted from wallet
+  New Balance: ₱${newBalance}
+        `.trim();
+      } else {
+        const loanAmount = Math.abs(newBalance);
+        await wallet.update({
+          balance: newBalance.toString(),
+          loanedAmount: loanAmount.toString(),
+          status: "loaned",
+        });
+
+        await Transaction.create({
+          Transaction_Number: transactionNumber,
+          User: user.userId,
+          discount: "0",
+          discount_Value: "0",
+          total: fare.toString(),
+        });
+
+        console.log(
+          `Insufficient funds. New balance: ₱${newBalance}, Loan: ₱${loanAmount}`
+        );
+        message = `
+  TRIP_COMPLETED:
+  ID: ${user.userId}
+  Name: ${user.firstName} ${user.middleName || ""} ${user.lastName}
+  PickUp: ${activeTrip.PickUp} (₱${pickupLocationDetails.Location_price})
+  DropOff: ${currentLocation.Location_Now} (₱${
+          currentLocationDetails.Location_price
+        })
+  Fare: ₱${fare}
+  Payment: Insufficient funds - New balance: ₱${newBalance}
+  Loan Amount: ₱${loanAmount}
+  Wallet Status: Loaned
+        `.trim();
+      }
     } else {
       await Passenger.create({
         User: user.userId,
@@ -101,6 +176,14 @@ async function fetchUser(ws, rfidMessage) {
   DropOff: Pending
       `.trim();
     }
+
+    const updatedWallet = await Wallet.findOne({
+      where: { Wallet_id: user.userId },
+    });
+    console.log(
+      "Updated wallet:",
+      JSON.stringify(updatedWallet.get({ plain: true }), null, 2)
+    );
 
     ws.send(message);
     console.log(message);

@@ -15,11 +15,11 @@ import {
   createTableTrainRoute,
   createTableTrainCurrent,
 } from "./Services/tableCreate.js";
-import {
-  syncAllFirebaseUsersToSequelize,
-  syncAllTrainRoutes,
-  syncCurrentLocationFromFirebase,
-} from "./Services/firebaseSync.js";
+// import {
+//   syncAllFirebaseUsersToSequelize,
+//   syncAllTrainRoutes,
+//   syncCurrentLocationFromFirebase,
+// } from "./Services/firebaseSync.js";
 import startSocket1 from "./Websockets/serverSocket1.js";
 import startSocket2 from "./Websockets/serverSocket2.js";
 

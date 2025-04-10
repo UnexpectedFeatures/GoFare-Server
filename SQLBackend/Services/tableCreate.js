@@ -9,6 +9,7 @@ import Passenger from "../Models/passengerModel.js";
 import Transaction from "../Models/transactionModel.js";
 import TrainRoute from "../Models/trainRouteModel.js";
 import Current from "../Models/currentModel.js";
+import "../Models/associations.js";
 
 async function createTableUserAccounts() {
   try {
