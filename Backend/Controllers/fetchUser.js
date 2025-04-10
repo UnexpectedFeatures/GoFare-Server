@@ -1,6 +1,6 @@
 import db from "../database.js";
 
-export default async function fetchUser(ws, message) {
+export default async function fetchUser(ws, message, wss) {
   try {
     if (!message.includes("Card Scanned:")) {
       console.log("Ignoring unrelated message:", message);
@@ -14,7 +14,6 @@ export default async function fetchUser(ws, message) {
     }
 
     const userRef = db.ref("ClientReference");
-
     const snapshot = await userRef
       .orderByChild("rfid")
       .equalTo(rfid)
@@ -22,16 +21,16 @@ export default async function fetchUser(ws, message) {
 
     if (!snapshot.exists()) {
       console.log("No match for RFID:", rfid);
-      return ws.send(
-        JSON.stringify({
-          type: "error",
-          message: "No user found with this RFID",
-        })
-      );
+      const errorMessage = JSON.stringify({
+        type: "error",
+        message: "No user found with this RFID",
+      });
+      ws.send(errorMessage);
+      broadcastToSocket1(wss, errorMessage);
+      return;
     }
 
     let userData = null;
-
     snapshot.forEach((childSnapshot) => {
       if (!userData) {
         userData = childSnapshot.val();
@@ -43,20 +42,30 @@ export default async function fetchUser(ws, message) {
     }
 
     console.log("RFID matched, user data:", userData);
-    ws.send(
-      JSON.stringify({
-        type: "success",
-        message: "User found",
-        data: userData,
-      })
-    );
+    const successMessage = JSON.stringify({
+      type: "success",
+      message: "User found",
+      data: userData,
+    });
+    ws.send(successMessage);
+    broadcastToSocket1(wss, successMessage);
   } catch (error) {
     console.error("Error processing message:", error);
-    ws.send(
-      JSON.stringify({
-        type: "error",
-        message: error.message,
-      })
-    );
+    const errorMessage = JSON.stringify({
+      type: "error",
+      message: error.message,
+    });
+    ws.send(errorMessage);
+    broadcastToSocket1(wss, errorMessage);
   }
+}
+
+function broadcastToSocket1(wss, message) {
+  if (!wss) return;
+
+  wss.clients.forEach((client) => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(message);
+    }
+  });
 }

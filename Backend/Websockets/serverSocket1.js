@@ -22,7 +22,7 @@ function startSocket1() {
       const msg = message.toString();
       console.log("(Socket 1) Message received:", msg);
 
-      handleWebSocket1Message(ws, msg);
+      handleWebSocket1Message(ws, msg, wss); 
 
       if (!msg.startsWith("[FORWARDED]")) {
         if (socket2Client && socket2Client.readyState === WebSocket.OPEN) {
@@ -33,11 +33,9 @@ function startSocket1() {
 
     ws.on("close", () => {
       console.log("(Socket 1) WebSocket connection closed");
-      trainSimulator.removeWebSocketClient(ws);
     });
   });
 
   console.log(`(Socket 1) WebSocket server started on port`, port);
 }
-
 export default startSocket1;
