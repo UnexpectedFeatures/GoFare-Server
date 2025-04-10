@@ -2,7 +2,6 @@ import { WebSocketServer } from "ws";
 import WebSocket from "ws";
 import dotenv from "dotenv";
 import handleWebSocket1Message from "../Routes/webSocketRoute1.js";
-import trainSimulator from "../Controllers/trainController.js";
 
 dotenv.config();
 
@@ -14,8 +13,6 @@ function startSocket1() {
 
   wss.on("connection", (ws) => {
     console.log("(Socket 1) New client connected on port", port);
-
-    trainSimulator.addWebSocketClient(ws);
 
     if (socket2Client && socket2Client.readyState === WebSocket.OPEN) {
       socket2Client.send("[NOTIFY] New client connected to Socket 1");
