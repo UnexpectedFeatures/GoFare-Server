@@ -6,6 +6,7 @@ import fdb from "../fdatabase.js";
 import Current from "../Models/currentModel.js";
 import { clearInterval } from "timers";
 import AdminAccount from "../Models/adminAccountsModel.js";
+import chalk from "chalk";
 
 let syncInterval;
 let isSyncing = false;
@@ -23,14 +24,14 @@ async function syncCurrentLocationFromFirebase() {
   const startTime = Date.now();
 
   try {
-    console.log("Starting location sync...");
+    console.log(chalk.blue("Starting location sync..."));
     const snapshot = await fdb
       .ref("trainSimulation/currentPosition")
       .once("value");
     const currentPosition = snapshot.val();
 
     if (!currentPosition) {
-      console.warn("No current position data in Firebase");
+      console.warn(chalk.yellow("No current position data in Firebase"));
       return null;
     }
 
@@ -49,7 +50,7 @@ async function syncCurrentLocationFromFirebase() {
     console.log(`Synced location (${duration}ms): ${stopName}`);
     return currentRecord;
   } catch (error) {
-    console.error("Sync failed:", error);
+    console.error(chalk.red("Sync failed:", error));
     throw error;
   } finally {
     isSyncing = false;
@@ -79,7 +80,7 @@ async function syncAllFirebaseUsersToSequelize() {
       }
     }
 
-    console.log(`Successfully synced ${results.length} users`);
+    console.log(chalk.green(`Successfully synced ${results.length} users`));
     return results;
   } catch (error) {
     console.error("Error in syncAllFirebaseUsersToSequelize:", error);
@@ -128,7 +129,9 @@ async function syncSingleUser(firebaseData) {
       await wallet.update(walletData);
     }
 
-    console.log(`Successfully synced data for user ${user.userId}`);
+    console.log(
+      chalk.green(`Successfully synced data for user ${user.userId}`)
+    );
     return { user, wallet, userCreated, walletCreated };
   } catch (error) {
     console.error("Error syncing user:", error);
@@ -174,7 +177,9 @@ async function syncAdminAccountsFromFirebase() {
 async function syncSingleAdmin(firebaseData) {
   try {
     if (!firebaseData.email && !firebaseData.rfid) {
-      console.warn("Skipping admin sync - missing both email and rfid");
+      console.warn(
+        chalk.yellow("Skipping admin sync - missing both email and rfid")
+      );
       return null;
     }
 
@@ -304,7 +309,9 @@ async function syncAllTrainRoutes() {
       }
     }
 
-    console.log(`Successfully synced ${results.length} train route stops`);
+    console.log(
+      chalk.green(`Successfully synced ${results.length} train route stops`)
+    );
     return results;
   } catch (error) {
     console.error("Error in syncAllTrainRoutes:", error);
@@ -326,9 +333,10 @@ async function allSync() {
     console.log(`→ Users synced: ${users.length}`);
     console.log(`→ Train routes synced: ${routes.length}`);
     console.log(
-      `→ Current location: ${location?.Location_Now || "Not available"}`
+      chalk.cyan(
+        `→ Current location: ${location?.Location_Now || "Not available"}`
+      )
     );
-
     return { users, routes, location, admins };
   } catch (error) {
     console.error("Error during full sync:", error);
@@ -336,7 +344,7 @@ async function allSync() {
   }
 }
 
-function startAllSync(interval = 5000) {
+function startAllSync(interval = 1000) {
   stopAllSync();
 
   allSync().catch((e) => console.error("Initial allSync error:", e));

@@ -1,4 +1,5 @@
 import fdb from "../fdatabase.js";
+import chalk from "chalk";
 
 const trainSimulator = {
   currentState: {
@@ -69,19 +70,19 @@ const trainSimulator = {
 
       return this.currentState.currentRoute;
     } catch (error) {
-      console.error("Initialization error:", error.message);
+      console.error(chalk.red(`Initialization error: ${error.message}`));
       throw error;
     }
   },
 
   start(interval = 5000) {
     if (this.currentState.isRunning) {
-      console.log("Simulation is already running");
+      console.log(chalk.red("⚠️ Simulation is already running"));
       return;
     }
 
     if (!this.currentState.currentRoute) {
-      console.error("No route initialized. Call init() first.");
+      console.error(chalk.red("❗ No route initialized. Call init() first."));
       return;
     }
 
@@ -131,10 +132,18 @@ const trainSimulator = {
 
     this.broadcast(arrivalMessage);
 
-    console.log(`\nNow arriving at: ${currentStop.name}`);
-    console.log(`Stop ${currentStopIndex + 1} of ${stops.length}`);
+    console.log(
+      chalk.greenBright(
+        `\n🚉 Now arriving at: ${chalk.yellow(currentStop.name)}`
+      )
+    );
+    console.log(
+      chalk.cyan(`📍 Stop ${currentStopIndex + 1} of ${stops.length}`)
+    );
     if (currentStop.price) {
-      console.log(`fdbTicket price from origin: ¥${currentStop.price}`);
+      console.log(
+        chalk.magenta(`🎟️ fdbTicket price from origin: ¥${currentStop.price}`)
+      );
     }
 
     this.updateTrainPosition();
@@ -159,16 +168,22 @@ const trainSimulator = {
       });
 
       console.log(
-        `Updated Firebase with current position at ${currentStop.name}\n`
+        chalk.blueBright(
+          `✅ Updated Firebase with current position at ${chalk.yellow(
+            currentStop.name
+          )}\n`
+        )
       );
     } catch (error) {
-      console.error("Error updating train position:", error.message);
+      console.error(
+        chalk.red(`Error updating train position: ${error.message}`)
+      );
     }
   },
 
   stop() {
     if (!this.currentState.isRunning) {
-      console.log("Simulation is not running");
+      console.log(chalk.red("⚠️ Simulation is not running"));
       return;
     }
 
