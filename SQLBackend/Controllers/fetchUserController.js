@@ -4,6 +4,7 @@ import Passenger from "../Models/passengerModel.js";
 import TrainRoute from "../Models/trainRouteModel.js";
 import Transaction from "../Models/transactionModel.js";
 import Wallet from "../Models/walletModel.js";
+import fdb from "../fdatabase.js";
 
 async function fetchUser(ws, rfidMessage) {
   try {
@@ -36,6 +37,40 @@ async function fetchUser(ws, rfidMessage) {
     console.log(
       `Initial wallet balance: ₱${wallet.balance}, Status: ${wallet.status}`
     );
+
+    const clientRef = fdb.ref("ClientReference");
+
+    const snapshot = await clientRef
+      .orderByChild("rfid")
+      .equalTo(rfid)
+      .once("value");
+    let firebaseUserPath = null;
+
+    snapshot.forEach((childSnapshot) => {
+      firebaseUserPath = childSnapshot.key;
+    });
+
+    if (firebaseUserPath) {
+      await clientRef.child(`${firebaseUserPath}/wallet`).update({
+        balance: wallet.balance,
+        status: wallet.status,
+        loanedAmount: wallet.loanedAmount,
+        lastUpdated: new Date().toISOString(),
+      });
+      console.log(`Updated Firebase wallet for RFID ${rfid}`);
+    } else {
+      console.log(`RFID ${rfid} not found in ClientReference`);
+      // const newRef = clientRef.push();
+      // await newRef.set({
+      //   rfid: rfid,
+      //   wallet: {
+      //     balance: wallet.balance,
+      //     status: wallet.status,
+      //     loanedAmount: wallet.loanedAmount,
+      //     lastUpdated: new Date().toISOString()
+      //   }
+      // });
+    }
 
     const currentLocation = await Current.findOne({
       order: [["createdAt", "DESC"]],
@@ -77,7 +112,6 @@ async function fetchUser(ws, rfidMessage) {
       const fare =
         currentLocationDetails.Location_price +
         pickupLocationDetails.Location_price;
-
       console.log(`Processing payment - Fare: ₱${fare}`);
 
       await activeTrip.update({
@@ -89,9 +123,7 @@ async function fetchUser(ws, rfidMessage) {
 
       const currentBalance = parseFloat(wallet.balance);
       const fareAmount = parseFloat(fare);
-
       const transactionNumber = `TRX-${Date.now()}-${user.userId}`;
-
       const newBalance = currentBalance - fareAmount;
 
       if (newBalance >= 0) {
@@ -100,6 +132,15 @@ async function fetchUser(ws, rfidMessage) {
           status: "active",
           loanedAmount: "0",
         });
+
+        if (firebaseUserPath) {
+          await clientRef.child(`${firebaseUserPath}/wallet`).update({
+            balance: newBalance.toString(),
+            status: "active",
+            loanedAmount: "0",
+            lastUpdated: new Date().toISOString(),
+          });
+        }
 
         await Transaction.create({
           Transaction_Number: transactionNumber,
@@ -111,16 +152,16 @@ async function fetchUser(ws, rfidMessage) {
 
         console.log(`Payment successful. New balance: ₱${newBalance}`);
         message = `
-  TRIP_COMPLETED:
-  ID: ${user.userId}
-  Name: ${user.firstName} ${user.middleName || ""} ${user.lastName}
-  PickUp: ${activeTrip.PickUp} (₱${pickupLocationDetails.Location_price})
-  DropOff: ${currentLocation.Location_Now} (₱${
+TRIP_COMPLETED:
+ID: ${user.userId}
+Name: ${user.firstName} ${user.middleName || ""} ${user.lastName}
+PickUp: ${activeTrip.PickUp} (₱${pickupLocationDetails.Location_price})
+DropOff: ${currentLocation.Location_Now} (₱${
           currentLocationDetails.Location_price
         })
-  Fare: ₱${fare}
-  Payment: Deducted from wallet
-  New Balance: ₱${newBalance}
+Fare: ₱${fare}
+Payment: Deducted from wallet
+New Balance: ₱${newBalance}
         `.trim();
       } else {
         const loanAmount = Math.abs(newBalance);
@@ -129,6 +170,15 @@ async function fetchUser(ws, rfidMessage) {
           loanedAmount: loanAmount.toString(),
           status: "loaned",
         });
+
+        if (firebaseUserPath) {
+          await clientRef.child(`${firebaseUserPath}/wallet`).update({
+            balance: newBalance.toString(),
+            loanedAmount: loanAmount.toString(),
+            status: "loaned",
+            lastUpdated: new Date().toISOString(),
+          });
+        }
 
         await Transaction.create({
           Transaction_Number: transactionNumber,
@@ -142,17 +192,17 @@ async function fetchUser(ws, rfidMessage) {
           `Insufficient funds. New balance: ₱${newBalance}, Loan: ₱${loanAmount}`
         );
         message = `
-  TRIP_COMPLETED:
-  ID: ${user.userId}
-  Name: ${user.firstName} ${user.middleName || ""} ${user.lastName}
-  PickUp: ${activeTrip.PickUp} (₱${pickupLocationDetails.Location_price})
-  DropOff: ${currentLocation.Location_Now} (₱${
+TRIP_COMPLETED:
+ID: ${user.userId}
+Name: ${user.firstName} ${user.middleName || ""} ${user.lastName}
+PickUp: ${activeTrip.PickUp} (₱${pickupLocationDetails.Location_price})
+DropOff: ${currentLocation.Location_Now} (₱${
           currentLocationDetails.Location_price
         })
-  Fare: ₱${fare}
-  Payment: Insufficient funds - New balance: ₱${newBalance}
-  Loan Amount: ₱${loanAmount}
-  Wallet Status: Loaned
+Fare: ₱${fare}
+Payment: Insufficient funds - New balance: ₱${newBalance}
+Loan Amount: ₱${loanAmount}
+Wallet Status: Loaned
         `.trim();
       }
     } else {
@@ -167,23 +217,15 @@ async function fetchUser(ws, rfidMessage) {
       });
 
       message = `
-  TRIP_STARTED:
-  ID: ${user.userId}
-  Name: ${user.firstName} ${user.middleName || ""} ${user.lastName}
-  PickUp: ${currentLocation.Location_Now} (₱${
+TRIP_STARTED:
+ID: ${user.userId}
+Name: ${user.firstName} ${user.middleName || ""} ${user.lastName}
+PickUp: ${currentLocation.Location_Now} (₱${
         currentLocationDetails.Location_price
       })
-  DropOff: Pending
+DropOff: Pending
       `.trim();
     }
-
-    const updatedWallet = await Wallet.findOne({
-      where: { Wallet_id: user.userId },
-    });
-    console.log(
-      "Updated wallet:",
-      JSON.stringify(updatedWallet.get({ plain: true }), null, 2)
-    );
 
     ws.send(message);
     console.log(message);
