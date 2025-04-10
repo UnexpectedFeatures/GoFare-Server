@@ -15,7 +15,7 @@ function startSocket1() {
 
   wss.on("connection", (ws) => {
     console.log("(Socket 1) New client connected on port", port);
-    allClients.add(ws); // Add new client to the Set
+    allClients.add(ws);
 
     if (socket2Client && socket2Client.readyState === WebSocket.OPEN) {
       socket2Client.send("[NOTIFY] New client connected to Socket 1");
@@ -27,32 +27,32 @@ function startSocket1() {
 
       if (msg.startsWith("Card Scanned:")) {
         const rfid = msg.substring(13).trim();
-        // Pass the allClients Set to the controller
         await fetchUser(ws, rfid, allClients);
         return;
       }
 
       if (!msg.startsWith("[FORWARDED]")) {
-        // Broadcast to all other clients except the sender
         broadcastToAll(ws, `[FORWARDED] ${msg}`, allClients);
-
-        // Also send to Socket 2 if available
         if (socket2Client && socket2Client.readyState === WebSocket.OPEN) {
           socket2Client.send(`[FORWARDED] ${msg}`);
         }
       }
     });
 
+    ws.on("register", () => {
+      console.log("Registering.. ");
+      
+    })
+
     ws.on("close", () => {
       console.log("(Socket 1) WebSocket connection closed");
-      allClients.delete(ws); // Remove client when disconnected
+      allClients.delete(ws); 
     });
   });
 
   console.log(`(Socket 1) WebSocket server started on port`, port);
 }
 
-// Helper function to broadcast to all clients except the sender
 function broadcastToAll(senderWs, message, clientsSet) {
   clientsSet.forEach((client) => {
     if (client !== senderWs && client.readyState === WebSocket.OPEN) {
