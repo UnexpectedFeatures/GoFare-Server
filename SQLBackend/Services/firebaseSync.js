@@ -6,6 +6,8 @@ import fdb from "../fdatabase.js";
 import Current from "../Models/currentModel.js";
 import { clearInterval } from "timers";
 import AdminAccount from "../Models/adminAccountsModel.js";
+import Transaction from "../Models/transactionModel.js";
+import Passenger from "../Models/passengerModel.js";
 import chalk from "chalk";
 
 let syncInterval;
@@ -319,15 +321,116 @@ async function syncAllTrainRoutes() {
   }
 }
 
+async function syncAllTransactionsAndPassengers() {
+  try {
+    await db.sync();
+
+    const snapshot = await fdb.ref("Transactions").once("value");
+    const firebaseTransactions = snapshot.val();
+
+    if (!firebaseTransactions) {
+      console.log("No transactions found in Firebase");
+      return { transactions: [], passengers: [] };
+    }
+
+    const transactionResults = [];
+    const passengerResults = [];
+
+    for (const [rfid, userTransactions] of Object.entries(
+      firebaseTransactions
+    )) {
+      try {
+        // Find the user by RFID
+        const user = await UserAccount.findOne({ where: { rfid } });
+
+        if (!user) {
+          console.warn(
+            `User with RFID ${rfid} not found, skipping transactions`
+          );
+          continue;
+        }
+
+        for (const [txnKey, txnData] of Object.entries(userTransactions)) {
+          try {
+            const [transaction, txnCreated] = await Transaction.findOrCreate({
+              where: { Transaction_Number: txnData.transactionNumber },
+              defaults: {
+                Transaction_Number: txnData.transactionNumber,
+                User: user.userId,
+                Rfid: rfid,
+                discount: txnData.discount ? "true" : "false",
+                discount_Value: "0",
+                total: txnData.total.toString(),
+              },
+            });
+
+            transactionResults.push({
+              transactionId: transaction.Transaction_id,
+              transactionNumber: transaction.Transaction_Number,
+              created: txnCreated,
+            });
+
+            const pickupLocation = await TrainRoute.findOne({
+              where: { TrainRoute_Location: txnData.pickup },
+            });
+
+            const dropoffLocation = await TrainRoute.findOne({
+              where: { TrainRoute_Location: txnData.dropoff },
+            });
+
+            const [passenger, passengerCreated] = await Passenger.findOrCreate({
+              where: { transaction_number: txnData.transactionNumber },
+              defaults: {
+                User: user.userId,
+                Rfid: rfid,
+                PickUp: txnData.pickup,
+                Pick_Up_Amout: pickupLocation?.Location_price || 0,
+                Drop_Off: txnData.dropoff,
+                Drop_Off_Amount: dropoffLocation?.Location_price || 0,
+                amount: parseInt(txnData.total) || 0,
+                transaction_number: txnData.transactionNumber,
+              },
+            });
+
+            passengerResults.push({
+              passengerId: passenger.Passenger_id,
+              transactionNumber: passenger.transaction_number,
+              created: passengerCreated,
+            });
+          } catch (error) {
+            console.error(
+              `Error processing transaction ${txnKey} for RFID ${rfid}:`,
+              error
+            );
+          }
+        }
+      } catch (error) {
+        console.error(`Error processing transactions for RFID ${rfid}:`, error);
+      }
+    }
+
+    console.log(
+      chalk.green(
+        `Successfully synced ${transactionResults.length} transactions and ${passengerResults.length} passenger records`
+      )
+    );
+    return { transactions: transactionResults, passengers: passengerResults };
+  } catch (error) {
+    console.error("Error in syncAllTransactionsAndPassengers:", error);
+    throw error;
+  }
+}
+
 async function allSync() {
   console.log("Starting full sync...");
 
   try {
-    const [users, routes, location, admins] = await Promise.all([
+    const [users, routes, location, admins, transactions] = await Promise.all([
       syncAllFirebaseUsersToSequelize(),
       syncAllTrainRoutes(),
       syncCurrentLocationFromFirebase(),
       syncAdminAccountsFromFirebase(),
+      syncAllTransactionsAndPassengers(),
     ]);
 
     console.log(`→ Users synced: ${users.length}`);
@@ -337,7 +440,11 @@ async function allSync() {
         `→ Current location: ${location?.Location_Now || "Not available"}`
       )
     );
-    return { users, routes, location, admins };
+    console.log(`→ Transactions synced: ${transactions.transactions.length}`);
+    console.log(
+      `→ Passenger records synced: ${transactions.passengers.length}`
+    );
+    return { users, routes, location, admins, transactions };
   } catch (error) {
     console.error("Error during full sync:", error);
     throw error;
