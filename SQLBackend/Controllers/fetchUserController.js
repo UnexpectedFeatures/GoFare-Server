@@ -61,7 +61,7 @@ async function fetchUser(initiatingWs, rfidMessage, allClients) {
 
     if (firebaseUserPath) {
       await clientRef.child(`${firebaseUserPath}/wallet`).update({
-        balance: wallet.balance,
+        balance: Number(wallet.balance),
         status: wallet.status,
         loanedAmount: wallet.loanedAmount,
         lastUpdated: new Date().toISOString(),
@@ -152,7 +152,7 @@ async function fetchUser(initiatingWs, rfidMessage, allClients) {
         Rfid: user.rfid,
         discount: "0",
         discount_Value: "0",
-        total: fare.toString(),
+        total: fare,
       });
 
       await activeTrip.update({
@@ -165,16 +165,16 @@ async function fetchUser(initiatingWs, rfidMessage, allClients) {
 
       if (newBalance >= 0) {
         await wallet.update({
-          balance: newBalance.toString(),
+          balance: newBalance,
           status: "active",
-          loanedAmount: "0",
+          loanedAmount: 0,
         });
 
         if (firebaseUserPath) {
           await clientRef.child(`${firebaseUserPath}/wallet`).update({
-            balance: newBalance.toString(),
+            balance: newBalance,
             status: "active",
-            loanedAmount: "0",
+            loanedAmount: 0,
             lastUpdated: new Date().toISOString(),
           });
         }
@@ -188,20 +188,20 @@ async function fetchUser(initiatingWs, rfidMessage, allClients) {
 
         await userTransactionsRef.child(newTransactionKey).set({
           transactionNumber: transactionNumber,
-          balance: currentBalance.toString(),
+          balance: currentBalance,
           date: new Date().toLocaleDateString("en-US"),
           discount: false,
           dropoff: currentLocation.Location_Now,
           loaned: false,
           pickup: activeTrip.PickUp,
-          remainingBalance: newBalance.toString(),
+          remainingBalance: newBalance,
           time: new Date().toLocaleTimeString("en-US", {
             hour: "2-digit",
             minute: "2-digit",
             second: "2-digit",
             hour12: true,
           }),
-          total: fare.toString(),
+          total: fare,
         });
 
         console.log(`Payment successful. New balance: ₱${newBalance}`);
@@ -220,15 +220,15 @@ async function fetchUser(initiatingWs, rfidMessage, allClients) {
       } else {
         const loanAmount = Math.abs(newBalance);
         await wallet.update({
-          balance: newBalance.toString(),
-          loanedAmount: loanAmount.toString(),
+          balance: newBalance,
+          loanedAmount: loanAmount,
           status: "loaned",
         });
 
         if (firebaseUserPath) {
           await clientRef.child(`${firebaseUserPath}/wallet`).update({
-            balance: newBalance.toString(),
-            loanedAmount: loanAmount.toString(),
+            balance: newBalance,
+            loanedAmount: loanAmount,
             status: "loaned",
             lastUpdated: new Date().toISOString(),
           });
@@ -242,20 +242,20 @@ async function fetchUser(initiatingWs, rfidMessage, allClients) {
         const newTransactionKey = `transaction${transactionCount + 1}`;
 
         await userTransactionsRef.child(newTransactionKey).set({
-          balance: currentBalance.toString(),
+          balance: currentBalance,
           date: new Date().toLocaleDateString("en-US"),
           discount: false,
           dropoff: currentLocation.Location_Now,
           loaned: true,
           pickup: activeTrip.PickUp,
-          remainingBalance: newBalance.toString(),
+          remainingBalance: newBalance,
           time: new Date().toLocaleTimeString("en-US", {
             hour: "2-digit",
             minute: "2-digit",
             second: "2-digit",
             hour12: true,
           }),
-          total: fare.toString(),
+          total: fare,
         });
 
         console.log(

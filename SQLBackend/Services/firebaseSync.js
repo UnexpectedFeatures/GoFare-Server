@@ -26,14 +26,14 @@ async function syncCurrentLocationFromFirebase() {
   const startTime = Date.now();
 
   try {
-    console.log(chalk.blue("Starting location sync..."));
+    // console.log(chalk.blue("Starting location sync..."));
     const snapshot = await fdb
       .ref("trainSimulation/currentPosition")
       .once("value");
     const currentPosition = snapshot.val();
 
     if (!currentPosition) {
-      console.warn(chalk.yellow("No current position data in Firebase"));
+      // console.warn(chalk.yellow("No current position data in Firebase"));
       return null;
     }
 
@@ -49,7 +49,7 @@ async function syncCurrentLocationFromFirebase() {
     });
 
     const duration = Date.now() - startTime;
-    console.log(`Synced location (${duration}ms): ${stopName}`);
+    // console.log(`Synced location (${duration}ms): ${stopName}`);
     return currentRecord;
   } catch (error) {
     console.error(chalk.red("Sync failed:", error));
@@ -67,7 +67,7 @@ async function syncAllFirebaseUsersToSequelize() {
     const firebaseUsers = snapshot.val();
 
     if (!firebaseUsers) {
-      console.log("No users found in Firebase");
+      // console.log("No users found in Firebase");
       return [];
     }
 
@@ -78,11 +78,11 @@ async function syncAllFirebaseUsersToSequelize() {
         const result = await syncSingleUser(userData);
         results.push(result);
       } catch (error) {
-        console.error(`Error syncing user ${userId}:`, error);
+        // console.error(`Error syncing user ${userId}:`, error);
       }
     }
 
-    console.log(chalk.green(`Successfully synced ${results.length} users`));
+    // console.log(chalk.green(`Successfully synced ${results.length} users`));
     return results;
   } catch (error) {
     console.error("Error in syncAllFirebaseUsersToSequelize:", error);
@@ -131,9 +131,9 @@ async function syncSingleUser(firebaseData) {
       await wallet.update(walletData);
     }
 
-    console.log(
-      chalk.green(`Successfully synced data for user ${user.userId}`)
-    );
+    // console.log(
+    //   chalk.green(`Successfully synced data for user ${user.userId}`)
+    // );
     return { user, wallet, userCreated, walletCreated };
   } catch (error) {
     console.error("Error syncing user:", error);
@@ -168,7 +168,7 @@ async function syncAdminAccountsFromFirebase() {
       }
     }
 
-    console.log(`Successfully synced ${results.length} admin accounts`);
+    // console.log(`Successfully synced ${results.length} admin accounts`);
     return results;
   } catch (error) {
     console.error("Error in syncAdminAccountsFromFirebase:", error);
@@ -208,9 +208,9 @@ async function syncSingleAdmin(firebaseData) {
       });
 
       if (existingByEmail) {
-        console.log(
-          `Admin with email ${adminData.email} already exists (ID: ${existingByEmail.adminId})`
-        );
+        // console.log(
+        //   `Admin with email ${adminData.email} already exists (ID: ${existingByEmail.adminId})`
+        // );
 
         if (!adminData.rfid || existingByEmail.rfid === adminData.rfid) {
           await existingByEmail.update(adminData);
@@ -230,11 +230,11 @@ async function syncSingleAdmin(firebaseData) {
         await admin.update(adminData);
       }
 
-      console.log(
-        `Successfully ${adminCreated ? "created" : "updated"} admin account ${
-          admin.adminId
-        }`
-      );
+      // console.log(
+      //   `Successfully ${adminCreated ? "created" : "updated"} admin account ${
+      //     admin.adminId
+      //   }`
+      // );
       return { admin, adminCreated };
     }
 
@@ -248,11 +248,11 @@ async function syncSingleAdmin(firebaseData) {
         await admin.update(adminData);
       }
 
-      console.log(
-        `Successfully ${adminCreated ? "created" : "updated"} admin account ${
-          admin.adminId
-        }`
-      );
+      // console.log(
+      //   `Successfully ${adminCreated ? "created" : "updated"} admin account ${
+      //     admin.adminId
+      //   }`
+      // );
       return { admin, adminCreated };
     }
 
@@ -311,9 +311,9 @@ async function syncAllTrainRoutes() {
       }
     }
 
-    console.log(
-      chalk.green(`Successfully synced ${results.length} train route stops`)
-    );
+    // console.log(
+    //   chalk.green(`Successfully synced ${results.length} train route stops`)
+    // );
     return results;
   } catch (error) {
     console.error("Error in syncAllTrainRoutes:", error);
@@ -398,10 +398,10 @@ async function syncAllTransactionsAndPassengers() {
               created: passengerCreated,
             });
           } catch (error) {
-            console.error(
-              `Error processing transaction ${txnKey} for RFID ${rfid}:`,
-              error
-            );
+            // console.error(
+            //   `Error processing transaction ${txnKey} for RFID ${rfid}:`,
+            //   error
+            // );
           }
         }
       } catch (error) {
@@ -409,11 +409,11 @@ async function syncAllTransactionsAndPassengers() {
       }
     }
 
-    console.log(
-      chalk.green(
-        `Successfully synced ${transactionResults.length} transactions and ${passengerResults.length} passenger records`
-      )
-    );
+    // console.log(
+    //   chalk.green(
+    //     `Successfully synced ${transactionResults.length} transactions and ${passengerResults.length} passenger records`
+    //   )
+    // );
     return { transactions: transactionResults, passengers: passengerResults };
   } catch (error) {
     console.error("Error in syncAllTransactionsAndPassengers:", error);

@@ -27,6 +27,7 @@ function startSocket1() {
 
       if (msg.startsWith("Card Scanned:")) {
         const rfid = msg.substring(13).trim();
+        console.log("(Socket 1) Card scanned:", rfid);
         await fetchUser(ws, rfid, allClients);
         return;
       }
@@ -39,7 +40,7 @@ function startSocket1() {
       }
     });
 
-    ws.on("register", () => {
+    ws.on("register", () => { 
       console.log("Registering.. ");
       
     })

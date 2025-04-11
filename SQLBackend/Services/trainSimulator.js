@@ -132,14 +132,14 @@ const trainSimulator = {
 
     this.broadcast(arrivalMessage);
 
-    console.log(
-      chalk.greenBright(
-        `\n🚉 Now arriving at: ${chalk.yellow(currentStop.name)}`
-      )
-    );
-    console.log(
-      chalk.cyan(`📍 Stop ${currentStopIndex + 1} of ${stops.length}`)
-    );
+    // console.log(
+    //   chalk.greenBright(
+    //     `\n🚉 Now arriving at: ${chalk.yellow(currentStop.name)}`
+    //   )
+    // );
+    // console.log(
+    //   chalk.cyan(`📍 Stop ${currentStopIndex + 1} of ${stops.length}`)
+    // );
     if (currentStop.price) {
       console.log(
         chalk.magenta(`🎟️ fdbTicket price from origin: ¥${currentStop.price}`)
@@ -167,13 +167,13 @@ const trainSimulator = {
         price: currentStop.price || null,
       });
 
-      console.log(
-        chalk.blueBright(
-          `✅ Updated Firebase with current position at ${chalk.yellow(
-            currentStop.name
-          )}\n`
-        )
-      );
+      // console.log(
+      //   chalk.blueBright(
+      //     `✅ Updated Firebase with current position at ${chalk.yellow(
+      //       currentStop.name
+      //     )}\n`
+      //   )
+      // );
     } catch (error) {
       console.error(
         chalk.red(`Error updating train position: ${error.message}`)

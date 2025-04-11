@@ -11,7 +11,7 @@ function startSocket2() {
   const port = parseInt(process.env.WS_PORT_2, 10);
   const wss = new WebSocketServer({ port });
 
-  wss.on("connection", (ws) => {
+  wss.on("connection", (ws) => {  
     console.log("(Socket 2) New client connected on port", port);
 
     trainSimulator.addWebSocketClient(ws);
