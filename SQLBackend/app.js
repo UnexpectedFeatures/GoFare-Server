@@ -22,6 +22,7 @@ import {
   syncCurrentLocationFromFirebase,
   syncAdminAccountsFromFirebase,
 } from "./Services/firebaseSync.js";
+import { sendTransactionNotification } from "./Services/firebaseNotification.js";
 import startSocket1 from "./Websockets/serverSocket1.js";
 import startSocket2 from "./Websockets/serverSocket2.js";
 import runSimulation from "./Services/trainRunner.js";

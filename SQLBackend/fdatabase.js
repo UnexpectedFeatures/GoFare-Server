@@ -19,3 +19,4 @@ const fdb = admin.database();
 
 export default fdb;
 export const auth = admin.auth();
+export const messaging = admin.messaging();
