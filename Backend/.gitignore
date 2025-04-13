@@ -1,8 +1,0 @@
-.ENV
-node_modules
-package-lock.json
-5.0.1
-README.md'
-Receipts
-uploads
-key.json
