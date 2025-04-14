@@ -1,6 +1,7 @@
 import { WebSocketServer } from "ws";
 import WebSocket from "ws";
 import dotenv from "dotenv";
+import { findUserByRfid } from "../Controllers/userController.js";
 
 dotenv.config();
 
@@ -25,7 +26,43 @@ function startSocket1() {
 
       if (msg.startsWith("Card Scanned:")) {
         const rfid = msg.substring(13).trim();
-        // broadcastToAll(ws, `Card Scanned: ${rfid}`, allClients);
+        try {
+          const userInfo = await findUserByRfid(rfid);
+          if (userInfo) {
+            // Send user info back to the client
+            ws.send(
+              JSON.stringify({
+                type: "USER_INFO",
+                data: userInfo,
+              })
+            );
+
+            // Forward to socket2Client if needed
+            if (socket2Client && socket2Client.readyState === WebSocket.OPEN) {
+              socket2Client.send(
+                JSON.stringify({
+                  type: "USER_INFO",
+                  data: userInfo,
+                })
+              );
+            }
+          } else {
+            ws.send(
+              JSON.stringify({
+                type: "ERROR",
+                message: "User not found",
+              })
+            );
+          }
+        } catch (error) {
+          console.error("Error processing RFID scan:", error);
+          ws.send(
+            JSON.stringify({
+              type: "ERROR",
+              message: "Error processing request",
+            })
+          );
+        }
         return;
       }
 
