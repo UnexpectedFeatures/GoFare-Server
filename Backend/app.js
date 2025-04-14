@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import cors from "cors";
 import startSocket1 from "./Websockets/serverSocket1.js";
 import startSocket2 from "./Websockets/serverSocket2.js";
+import { sendTransactionNotification } from "./Services/firebaseNotification.js";
 
 dotenv.config();
 const app = express();
@@ -24,7 +25,6 @@ async function initializeApp() {
 
     startSocket1();
     startSocket2();
-
   } catch (error) {
     console.error("Error initializing the application:", error);
     process.exit(1);
