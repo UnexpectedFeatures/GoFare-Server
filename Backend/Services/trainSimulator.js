@@ -1,5 +1,5 @@
 import db from "../database.js";
-import logger from "./logger.js";
+import { trainLogger } from "./logger.js";
 
 class TrainSimulator {
   constructor() {
@@ -32,7 +32,7 @@ class TrainSimulator {
 
   async init(routeId = "Route1") {
     try {
-      logger.info(`🚂 Initializing route ${routeId}...`);
+      trainLogger.info(`🚂 Initializing route ${routeId}...`);
 
       const routeRef = db.collection("Route").doc(routeId);
       const doc = await routeRef.get();
@@ -77,20 +77,20 @@ class TrainSimulator {
         direction: 1,
       };
 
-      logger.info(
+      trainLogger.info(
         `✅ Successfully initialized route: ${this.currentState.currentRoute.name}`
       );
-      logger.info(`📍 Total stops: ${stops.length}`);
+      trainLogger.info(`📍 Total stops: ${stops.length}`);
 
       await this.updateTrainPosition();
 
       return this.currentState.currentRoute;
     } catch (error) {
-      logger.error(`❌ Initialization error: ${error.message}`);
-      logger.warn("ℹ️ Verify your Firestore has:");
-      logger.warn("1. A 'Route' collection (singular)");
-      logger.warn("2. A document named 'Route1' (capital R)");
-      logger.warn("3. Fields named Stop1, Stop2 with station names");
+      trainLogger.error(`❌ Initialization error: ${error.message}`);
+      trainLogger.warn("ℹ️ Verify your Firestore has:");
+      trainLogger.warn("1. A 'Route' collection (singular)");
+      trainLogger.warn("2. A document named 'Route1' (capital R)");
+      trainLogger.warn("3. Fields named Stop1, Stop2 with station names");
       throw error;
     }
   }
@@ -106,16 +106,16 @@ class TrainSimulator {
 
   start(interval = 5000) {
     if (this.currentState.isRunning) {
-      logger.warn("⚠️ Simulation is already running");
+      trainLogger.warn("⚠️ Simulation is already running");
       return;
     }
 
     if (!this.currentState.currentRoute) {
-      logger.error("❗ No route initialized. Call init() first.");
+      trainLogger.error("❗ No route initialized. Call init() first.");
       return;
     }
 
-    logger.info("🚀 Starting train simulation...");
+    trainLogger.info("🚀 Starting train simulation...");
     this.currentState.isRunning = true;
 
     this.announceCurrentStop();
@@ -132,10 +132,10 @@ class TrainSimulator {
 
     if (direction === 1 && currentStopIndex === stops.length - 1) {
       this.currentState.direction = -1;
-      logger.info("🔄 Reversing direction (end of line)");
+      trainLogger.info("🔄 Reversing direction (end of line)");
     } else if (direction === -1 && currentStopIndex === 0) {
       this.currentState.direction = 1;
-      logger.info("🔄 Reversing direction (start of line)");
+      trainLogger.info("🔄 Reversing direction (start of line)");
     }
 
     this.currentState.currentStopIndex += this.currentState.direction;
@@ -164,9 +164,9 @@ class TrainSimulator {
 
     this.broadcast(arrivalMessage);
 
-    logger.info(`🚉 Now arriving at: ${currentStop.name}`);
-    logger.info(`📍 Stop ${currentStopIndex + 1} of ${stops.length}`);
-    logger.info(`🧭 Direction: ${direction > 0 ? "Forward" : "Backward"}`);
+    trainLogger.info(`🚉 Now arriving at: ${currentStop.name}`);
+    trainLogger.info(`📍 Stop ${currentStopIndex + 1} of ${stops.length}`);
+    trainLogger.info(`🧭 Direction: ${direction > 0 ? "Forward" : "Backward"}`);
 
     this.updateTrainPosition();
   }
@@ -189,15 +189,15 @@ class TrainSimulator {
         status: "in-service",
       });
 
-      logger.info(`📌 Updated Firestore position to ${currentStop.name}`);
+      trainLogger.info(`📌 Updated Firestore position to ${currentStop.name}`);
     } catch (error) {
-      logger.error(`❌ Error updating position: ${error.message}`);
+      trainLogger.error(`❌ Error updating position: ${error.message}`);
     }
   }
 
   stop() {
     if (!this.currentState.isRunning) {
-      logger.warn("⚠️ Simulation is not running");
+      trainLogger.warn("⚠️ Simulation is not running");
       return;
     }
 
@@ -209,7 +209,7 @@ class TrainSimulator {
       lastUpdated: new Date().toISOString(),
     });
 
-    logger.info("🛑 Simulation stopped");
+    trainLogger.info("🛑 Simulation stopped");
   }
 
   getStatus() {

@@ -1,4 +1,5 @@
 import db from "../database.js";
+import { assignPickupOrDropoff } from "./userAssignment.js";
 
 export async function findUserByRfid(rfid) {
   try {
@@ -22,6 +23,8 @@ export async function findUserByRfid(rfid) {
       .limit(1)
       .get();
 
+    const result = await assignPickupOrDropoff(rfid);
+
     return {
       userData: {
         ...userData,
@@ -29,6 +32,7 @@ export async function findUserByRfid(rfid) {
       },
       walletData: walletQuery.empty ? null : walletQuery.docs[0].data(),
       walletExists: !walletQuery.empty,
+      assignmentStatus: result.status,
     };
   } catch (error) {
     console.error(`Error in findUserByRfidWithWallet:`, error);
