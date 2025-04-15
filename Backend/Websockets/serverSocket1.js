@@ -5,8 +5,16 @@ import { findUserByRfid } from "../Controllers/userController.js";
 
 dotenv.config();
 
-const allClients = new Set();
+export const allClients = new Set();
 let socket2Client = null;
+
+export function broadcastToAll(senderWs, message, clientsSet) {
+  clientsSet.forEach((client) => {
+    if (client !== senderWs && client.readyState === WebSocket.OPEN) {
+      client.send(message);
+    }
+  });
+}
 
 function startSocket1() {
   const port = parseInt(process.env.WS_PORT_1, 10);
@@ -63,10 +71,6 @@ function startSocket1() {
       }
     });
 
-    ws.on("register", () => {
-      console.log("Registering.. ");
-    });
-
     ws.on("close", () => {
       console.log("(Socket 1) WebSocket connection closed");
       allClients.delete(ws);
@@ -74,14 +78,6 @@ function startSocket1() {
   });
 
   console.log(`(Socket 1) WebSocket server started on port`, port);
-}
-
-function broadcastToAll(senderWs, message, clientsSet) {
-  clientsSet.forEach((client) => {
-    if (client !== senderWs && client.readyState === WebSocket.OPEN) {
-      client.send(message);
-    }
-  });
 }
 
 export default startSocket1;

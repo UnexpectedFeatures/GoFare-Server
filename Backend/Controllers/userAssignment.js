@@ -1,5 +1,6 @@
 import db from "../database.js";
 import { scanningLogger } from "../Services/logger.js";
+import { allClients, broadcastToAll } from "../Websockets/serverSocket1.js";
 
 function getFormattedGMT8() {
   const options = {
@@ -84,7 +85,7 @@ export async function assignPickupOrDropoff(rfid) {
         status: "awaiting_dropoff",
         createdAt: timestamp,
       };
-      action = `New trip - PICKUP at ${stopName}`;
+      action = `PICKUP`;
       await assignmentRef.set(assignmentData);
     } else {
       assignmentRef = assignmentsCollection.doc(
@@ -95,7 +96,7 @@ export async function assignPickupOrDropoff(rfid) {
       if (!existingData.dropoffStop) {
         if (existingData.pickupStop === stopName) {
           assignmentData.status = "in_progress";
-          action = `Still at pickup location ${stopName}`;
+          action = `PICKUP_CONFIRMED`;
         } else {
           assignmentData = {
             ...assignmentData,
@@ -104,7 +105,7 @@ export async function assignPickupOrDropoff(rfid) {
             status: "completed",
             completedAt: timestamp,
           };
-          action = `DROPOFF at ${stopName}`;
+          action = `DROPOFF`;
         }
         await assignmentRef.update(assignmentData);
       } else {
@@ -119,12 +120,33 @@ export async function assignPickupOrDropoff(rfid) {
           createdAt: timestamp,
           previousTripId: activeAssignmentQuery.docs[0].id,
         };
-        action = `New trip started - PICKUP at ${stopName}`;
+        action = `PICKUP`;
         await assignmentRef.set(assignmentData);
       }
     }
 
     scanningLogger.info(`${action} [User: ${userName}] at ${timestamp}`);
+
+    const wsMessage = {
+      type: "TRIP_UPDATE",
+      data: {
+        rfid: rfid,
+        userId: userId,
+        userName: userName,
+        action: action,
+        timestamp: timestamp,
+        stopName: stopName,
+        status: assignmentData.status,
+        pickupStop: assignmentData.pickupStop,
+        pickupTime: assignmentData.pickupTime,
+        dropoffStop: assignmentData.dropoffStop,
+        dropoffTime: assignmentData.dropoffTime,
+        assignmentId: assignmentRef.id,
+      },
+    };
+
+    broadcastToAll(null, JSON.stringify(wsMessage), allClients);
+
     return {
       status: "ASSIGNED",
       action,
