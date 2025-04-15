@@ -29,23 +29,12 @@ function startSocket1() {
         try {
           const userInfo = await findUserByRfid(rfid);
           if (userInfo) {
-            // Send user info back to the client
             ws.send(
               JSON.stringify({
                 type: "USER_INFO",
                 data: userInfo,
               })
             );
-
-            // Forward to socket2Client if needed
-            if (socket2Client && socket2Client.readyState === WebSocket.OPEN) {
-              socket2Client.send(
-                JSON.stringify({
-                  type: "USER_INFO",
-                  data: userInfo,
-                })
-              );
-            }
           } else {
             ws.send(
               JSON.stringify({
