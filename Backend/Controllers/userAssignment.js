@@ -1,9 +1,29 @@
 import db from "../database.js";
 import { scanningLogger } from "../Services/logger.js";
 
+function getFormattedPST() {
+  const now = new Date();
+  const pstOffset = 8 * 60 * 60 * 1000; 
+  const pstTime = new Date(now.getTime() + pstOffset);
+
+  const month = pstTime.getMonth() + 1;
+  const day = pstTime.getDate();
+  const year = pstTime.getFullYear();
+
+  let hours = pstTime.getHours();
+  const ampm = hours >= 12 ? "PM" : "AM";
+  hours = hours % 12;
+  hours = hours ? hours : 12;
+
+  const minutes = pstTime.getMinutes().toString().padStart(2, "0");
+
+  return `${month}/${day}/${year} ${hours}:${minutes} ${ampm}`;
+}
+
 export async function assignPickupOrDropoff(rfid) {
   try {
-    scanningLogger.info(`Assigning action for RFID: ${rfid}`);
+    const timestamp = getFormattedPST();
+    scanningLogger.info(`Assigning action for RFID: ${rfid} at ${timestamp}`);
 
     const userQuery = await db
       .collection("UserRFID")
@@ -17,133 +37,111 @@ export async function assignPickupOrDropoff(rfid) {
     }
 
     const userRfidDoc = userQuery.docs[0];
-    const userRfidData = userRfidDoc.data();
+    const userId = userRfidDoc.id;
 
-    const userIdRef = userRfidData.userId;
-    let userData = null;
-
-    if (userIdRef) {
-      const userDoc = await userIdRef.get();
-      if (userDoc.exists) {
-        userData = userDoc.data();
-        scanningLogger.info(`User found: ${userIdRef.id}`);
-      } else {
-        scanningLogger.warn(
-          `Linked user document not found for reference: ${userIdRef.id}`
-        );
-        return { status: "USER_DOCUMENT_NOT_FOUND" };
-      }
-    } else {
-      scanningLogger.warn(
-        `userId reference missing for RFID document: ${userRfidDoc.id}`
-      );
-      return { status: "USER_REFERENCE_MISSING" };
+    const userDoc = await db.collection("Users").doc(userId).get();
+    if (!userDoc.exists) {
+      scanningLogger.warn(`User document not found for ID: ${userId}`);
+      return { status: "USER_DOCUMENT_NOT_FOUND" };
     }
 
-    const walletQuery = await db
-      .collection("UserWallet")
-      .where("userId", "==", userIdRef)
-      .limit(1)
-      .get();
-
-    const walletData = walletQuery.empty ? null : walletQuery.docs[0].data();
-    scanningLogger.info(
-      `Wallet ${walletQuery.empty ? "not found" : "found"} for user ${
-        userIdRef.id
-      }`
-    );
+    const userData = userDoc.data();
+    const userName =
+      userData.name || `${userData.firstName} ${userData.lastName}`;
 
     const currentTrainDoc = await db
       .collection("TrainSimulation")
       .doc("CurrentPosition")
       .get();
 
-    if (!currentTrainDoc.exists) {
-      scanningLogger.error("🚨 Train current position not found!");
-      return { status: "TRAIN_POSITION_UNKNOWN" };
+    if (!currentTrainDoc.exists || !currentTrainDoc.data().stopName) {
+      scanningLogger.error("Train current position not found or invalid");
+      return { status: "TRAIN_POSITION_INVALID" };
     }
 
-    const trainPosition = currentTrainDoc.data();
-    const currentStop = trainPosition.stopName || "Unknown Stop";
+    const stopName = currentTrainDoc.data().stopName;
 
-    const assignmentsCollection = db.collection("UserAssignments");
-
-    const incompleteAssignmentQuery = await assignmentsCollection
-      .where("userId", "==", userIdRef)
-      .where("status", "in", ["pending", "pickup-completed"])
-      .orderBy("createdAt", "desc")
-      .limit(1)
-      .get();
+    const userAssignmentRef = db.collection("UserAssignments").doc(userId);
+    const assignmentDoc = await userAssignmentRef.get();
 
     let action = "";
-    let assignmentData = {
-      userId: userIdRef,
-      updatedAt: new Date().toISOString(),
+    let updateData = {
+      updatedAt: timestamp,
+      userId: userId,
+      userName: userName,
     };
 
-    if (incompleteAssignmentQuery.empty) {
-      assignmentData = {
-        ...assignmentData,
-        pickupStop: currentStop,
-        pickupTime: new Date().toISOString(),
-        status: "pending",
-        createdAt: new Date().toISOString(),
+    if (!assignmentDoc.exists) {
+      updateData = {
+        ...updateData,
+        pickupStop: stopName,
+        pickupTime: timestamp,
+        dropoffStop: null,
+        dropoffTime: null,
+        status: "awaiting_dropoff",
+        createdAt: timestamp,
       };
-      action = `📌 Assigned PICKUP at ${currentStop}`;
-
-      await assignmentsCollection.add(assignmentData);
+      action = `Assigned PICKUP at ${stopName} (${timestamp})`;
+      await userAssignmentRef.set(updateData);
     } else {
-      const existingAssignment = incompleteAssignmentQuery.docs[0];
-      const existingData = existingAssignment.data();
+      const existingData = assignmentDoc.data();
 
       if (!existingData.pickupStop) {
-        await existingAssignment.ref.update({
-          pickupStop: currentStop,
-          pickupTime: new Date().toISOString(),
-          status: "pending",
-          ...assignmentData,
-        });
-        action = `📌 Assigned PICKUP at ${currentStop}`;
-      } else if (!existingData.dropoffStop) {
-        // Add dropoff to existing assignment
-        await existingAssignment.ref.update({
-          dropoffStop: currentStop,
-          dropoffTime: new Date().toISOString(),
-          status: "completed",
-          ...assignmentData,
-        });
-        action = `✅ Assigned DROPOFF at ${currentStop}`;
-      } else {
-        assignmentData = {
-          ...assignmentData,
-          pickupStop: currentStop,
-          pickupTime: new Date().toISOString(),
-          status: "pending",
-          createdAt: new Date().toISOString(),
+        updateData = {
+          ...updateData,
+          pickupStop: stopName,
+          pickupTime: timestamp,
+          status: "awaiting_dropoff",
         };
-        action = `📌 Started new trip with PICKUP at ${currentStop}`;
-
-        await assignmentsCollection.add(assignmentData);
+        action = `Assigned PICKUP at ${stopName} (${timestamp})`;
+      } else if (
+        !existingData.dropoffStop &&
+        existingData.status === "awaiting_dropoff"
+      ) {
+        if (existingData.pickupStop === stopName) {
+          action = `User already picked up at ${stopName} (${timestamp})`;
+          updateData.status = "awaiting_dropoff";
+        } else {
+          updateData = {
+            ...updateData,
+            dropoffStop: stopName,
+            dropoffTime: timestamp,
+            status: "completed",
+            completedAt: timestamp,
+          };
+          action = `Assigned DROPOFF at ${stopName} (${timestamp})`;
+        }
+      } else {
+        updateData = {
+          ...updateData,
+          pickupStop: stopName,
+          pickupTime: timestamp,
+          dropoffStop: null,
+          dropoffTime: null,
+          status: "awaiting_dropoff",
+          completedAt: null,
+        };
+        action = `Started new trip with PICKUP at ${stopName} (${timestamp})`;
       }
+
+      await userAssignmentRef.update(updateData);
     }
 
-    scanningLogger.info(`${action} [User: ${userData.name || userIdRef.id}]`);
-
+    scanningLogger.info(`${action} [User: ${userName}]`);
     return {
       status: "ASSIGNED",
+      action,
+      timestamp: timestamp,
+      assignmentData: updateData,
       user: {
         ...userData,
-        documentId: userIdRef.id,
+        documentId: userId,
       },
-      walletData,
-      action,
-      currentStop,
     };
   } catch (error) {
-    scanningLogger.error(
-      `❌ Error assigning pickup/dropoff: ${error.message}`,
-      { stack: error.stack }
-    );
+    scanningLogger.error(`Error in assignPickupOrDropoff: ${error.message}`, {
+      stack: error.stack,
+    });
     throw error;
   }
 }

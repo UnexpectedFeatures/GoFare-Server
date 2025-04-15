@@ -19,41 +19,32 @@ export async function findUserByRfid(rfid) {
 
     const userDoc = userQuery.docs[0];
     const userData = userDoc.data();
+    const userRfidDocId = userDoc.id;
 
-    const userIdRef = userData.userId;
+    scanningLogger.info(`Found RFID document with ID: ${userRfidDocId}`);
+
+    const userRef = db.collection("Users").doc(userRfidDocId);
+    const userDocSnapshot = await userRef.get();
+
     let linkedUserData = null;
-
-    if (userIdRef) {
-      const linkedUserDoc = await userIdRef.get();
-      if (linkedUserDoc.exists) {
-        linkedUserData = linkedUserDoc.data();
-        scanningLogger.info(`Linked User document found: ${userIdRef.id}`);
-      } else {
-        scanningLogger.warn(
-          `Linked User document not found for reference: ${userIdRef.id}`
-        );
-      }
+    if (userDocSnapshot.exists) {
+      linkedUserData = userDocSnapshot.data();
+      scanningLogger.info(`Linked User document found: ${userRfidDocId}`);
     } else {
       scanningLogger.warn(
-        `No userId reference found in RFID document: ${userDoc.id}`
+        `Linked User document not found for ID: ${userRfidDocId}`
       );
     }
 
     let walletData = null;
-    if (userIdRef) {
-      const walletQuery = await db
-        .collection("UserWallet")
-        .where("userId", "==", userIdRef)
-        .limit(1)
-        .get();
+    const walletRef = db.collection("UserWallet").doc(rfid);
+    const walletDoc = await walletRef.get();
 
-      walletData = walletQuery.empty ? null : walletQuery.docs[0].data();
-
-      scanningLogger.info(
-        `Wallet ${walletQuery.empty ? "not found" : "found"} for linked user ${
-          userIdRef.id
-        }`
-      );
+    if (walletDoc.exists) {
+      walletData = walletDoc.data();
+      scanningLogger.info(`Wallet found for RFID: ${rfid}`);
+    } else {
+      scanningLogger.warn(`Wallet not found for RFID: ${rfid}`);
     }
 
     const result = await assignPickupOrDropoff(rfid);
@@ -62,10 +53,10 @@ export async function findUserByRfid(rfid) {
     return {
       userData: {
         ...userData,
-        documentId: userDoc.id,
+        documentId: userRfidDocId,
       },
       linkedUserData: linkedUserData
-        ? { ...linkedUserData, documentId: userIdRef.id }
+        ? { ...linkedUserData, documentId: userRfidDocId }
         : null,
       walletData: walletData,
       walletExists: walletData !== null,
