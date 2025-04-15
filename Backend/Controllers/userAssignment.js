@@ -1,28 +1,24 @@
 import db from "../database.js";
 import { scanningLogger } from "../Services/logger.js";
 
-function getFormattedPST() {
-  const now = new Date();
-  const pstOffset = 8 * 60 * 60 * 1000; 
-  const pstTime = new Date(now.getTime() + pstOffset);
+function getFormattedGMT8() {
+  const options = {
+    timeZone: "Asia/Shanghai",
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  };
 
-  const month = pstTime.getMonth() + 1;
-  const day = pstTime.getDate();
-  const year = pstTime.getFullYear();
-
-  let hours = pstTime.getHours();
-  const ampm = hours >= 12 ? "PM" : "AM";
-  hours = hours % 12;
-  hours = hours ? hours : 12;
-
-  const minutes = pstTime.getMinutes().toString().padStart(2, "0");
-
-  return `${month}/${day}/${year} ${hours}:${minutes} ${ampm}`;
+  const gmt8Time = new Intl.DateTimeFormat("en-US", options).format(new Date());
+  return gmt8Time.replace(",", "");
 }
 
 export async function assignPickupOrDropoff(rfid) {
   try {
-    const timestamp = getFormattedPST();
+    const timestamp = getFormattedGMT8();
     scanningLogger.info(`Assigning action for RFID: ${rfid} at ${timestamp}`);
 
     const userQuery = await db
@@ -61,19 +57,26 @@ export async function assignPickupOrDropoff(rfid) {
 
     const stopName = currentTrainDoc.data().stopName;
 
-    const userAssignmentRef = db.collection("UserAssignments").doc(userId);
-    const assignmentDoc = await userAssignmentRef.get();
+    const assignmentsCollection = db.collection("UserAssignments");
+    const activeAssignmentQuery = await assignmentsCollection
+      .where("userId", "==", userId)
+      .where("status", "in", ["awaiting_dropoff", "in_progress"])
+      .orderBy("createdAt", "desc")
+      .limit(1)
+      .get();
 
     let action = "";
-    let updateData = {
-      updatedAt: timestamp,
+    let assignmentRef;
+    let assignmentData = {
       userId: userId,
       userName: userName,
+      updatedAt: timestamp,
     };
 
-    if (!assignmentDoc.exists) {
-      updateData = {
-        ...updateData,
+    if (activeAssignmentQuery.empty) {
+      assignmentRef = assignmentsCollection.doc();
+      assignmentData = {
+        ...assignmentData,
         pickupStop: stopName,
         pickupTime: timestamp,
         dropoffStop: null,
@@ -81,58 +84,53 @@ export async function assignPickupOrDropoff(rfid) {
         status: "awaiting_dropoff",
         createdAt: timestamp,
       };
-      action = `Assigned PICKUP at ${stopName} (${timestamp})`;
-      await userAssignmentRef.set(updateData);
+      action = `New trip - PICKUP at ${stopName}`;
+      await assignmentRef.set(assignmentData);
     } else {
-      const existingData = assignmentDoc.data();
+      assignmentRef = assignmentsCollection.doc(
+        activeAssignmentQuery.docs[0].id
+      );
+      const existingData = activeAssignmentQuery.docs[0].data();
 
-      if (!existingData.pickupStop) {
-        updateData = {
-          ...updateData,
-          pickupStop: stopName,
-          pickupTime: timestamp,
-          status: "awaiting_dropoff",
-        };
-        action = `Assigned PICKUP at ${stopName} (${timestamp})`;
-      } else if (
-        !existingData.dropoffStop &&
-        existingData.status === "awaiting_dropoff"
-      ) {
+      if (!existingData.dropoffStop) {
         if (existingData.pickupStop === stopName) {
-          action = `User already picked up at ${stopName} (${timestamp})`;
-          updateData.status = "awaiting_dropoff";
+          assignmentData.status = "in_progress";
+          action = `Still at pickup location ${stopName}`;
         } else {
-          updateData = {
-            ...updateData,
+          assignmentData = {
+            ...assignmentData,
             dropoffStop: stopName,
             dropoffTime: timestamp,
             status: "completed",
             completedAt: timestamp,
           };
-          action = `Assigned DROPOFF at ${stopName} (${timestamp})`;
+          action = `DROPOFF at ${stopName}`;
         }
+        await assignmentRef.update(assignmentData);
       } else {
-        updateData = {
-          ...updateData,
+        assignmentRef = assignmentsCollection.doc();
+        assignmentData = {
+          ...assignmentData,
           pickupStop: stopName,
           pickupTime: timestamp,
           dropoffStop: null,
           dropoffTime: null,
           status: "awaiting_dropoff",
-          completedAt: null,
+          createdAt: timestamp,
+          previousTripId: activeAssignmentQuery.docs[0].id,
         };
-        action = `Started new trip with PICKUP at ${stopName} (${timestamp})`;
+        action = `New trip started - PICKUP at ${stopName}`;
+        await assignmentRef.set(assignmentData);
       }
-
-      await userAssignmentRef.update(updateData);
     }
 
-    scanningLogger.info(`${action} [User: ${userName}]`);
+    scanningLogger.info(`${action} [User: ${userName}] at ${timestamp}`);
     return {
       status: "ASSIGNED",
       action,
       timestamp: timestamp,
-      assignmentData: updateData,
+      assignmentData: assignmentData,
+      assignmentId: assignmentRef.id,
       user: {
         ...userData,
         documentId: userId,

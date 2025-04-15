@@ -167,6 +167,7 @@ class TrainSimulator {
     trainLogger.info(`🚉 Now arriving at: ${currentStop.name}`);
     trainLogger.info(`📍 Stop ${currentStopIndex + 1} of ${stops.length}`);
     trainLogger.info(`🧭 Direction: ${direction > 0 ? "Forward" : "Backward"}`);
+    trainLogger.info("");
 
     this.updateTrainPosition();
   }
