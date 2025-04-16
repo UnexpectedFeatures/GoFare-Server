@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import cors from "cors";
 import startSocket1 from "./Websockets/serverSocket1.js";
 import startSocket2 from "./Websockets/serverSocket2.js";
+import startSocket3 from "./Websockets/serverSocket3.js";
 import { sendTransactionNotification } from "./Services/firebaseNotification.js";
 import runSimulation from "./Services/trainRunner.js";
 import paypalRoutes from "./Routes/paypalRoutes.js";
@@ -28,6 +29,8 @@ async function initializeApp() {
 
     startSocket1();
     startSocket2();
+    startSocket3();
+
     await runSimulation();
   } catch (error) {
     console.error("Error initializing the application:", error);

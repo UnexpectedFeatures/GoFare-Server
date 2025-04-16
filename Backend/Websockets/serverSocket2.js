@@ -37,6 +37,10 @@ function startSocket2() {
       console.log("(Socket 2) WebSocket connection closed");
       allClients.delete(ws);
     });
+
+    ws.on("error", (error) => {
+      console.error("(Socket 2) WebSocket error:", error);
+    });
   });
 
   console.log(`(Socket 2) WebSocket server started on port`, port);

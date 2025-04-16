@@ -1,33 +1,23 @@
 import WebSocket, { WebSocketServer } from "ws";
 import dotenv from "dotenv";
-import handleRegisterAdmin from "../Controllers/AdminLogic/registerController.js";
-import fetchAdmins from "../Controllers/AdminLogic/fetchAdmin.js";
-import handleDelete from "../Controllers/AdminLogic/handleDelete.js";
-import handleEdit from "../Controllers/AdminLogic/handleEdit.js";
+import { handleFetchUsers } from "../Controllers/fetchUsers.js";
+import { handleFetchTransactions } from "../Controllers/fetchTransactions.js";
+import { handleFetchAllUserData } from "../Controllers/fetchEverything.js";
 
 dotenv.config();
 
 let socket3Admin = null;
 
-function startAdminSocket() {
+function startSocket3() {
   const port = parseInt(process.env.WS_PORT_3, 10);
-
-  if (isNaN(port)) {
-    throw new Error("WS_PORT_3 is not defined or invalid in .env");
-  }
-
   const wss = new WebSocketServer({ port });
-  console.log(`WebSocket Server listening on port ${port}`);
 
   wss.on("connection", (ws) => {
-    console.log("Client connected to WS 3003");
+    console.log("(Socket 3) New client connected on port", port);
     socket3Admin = ws;
 
-    console.log("Calling fetchAdmins upon connection...");
-    fetchAdmins(ws, "[FetchAdmins]");
-
     if (socket3Admin && socket3Admin.readyState === WebSocket.OPEN) {
-      console.log("Sending notify message...");
+      console.log("(Socket 3) Sending notify message...");
       socket3Admin.send("[NOTIFY] New client connected to Socket 3");
     }
 
@@ -35,20 +25,15 @@ function startAdminSocket() {
       const msg = message.toString();
       console.log("RAW MESSAGE:", JSON.stringify(msg));
 
-      if (msg.trim().startsWith("[Register]")) {
-        console.log("Registering admin...");
-        handleRegisterAdmin(ws, msg);
-      } else if (msg.startsWith("[Delete]")) {
-        console.log("Handling delete...");
-        handleDelete(ws, msg);
-      } else if (msg.startsWith("[Suspend]")) {
-        console.log("Suspending admin...");
-      } else if (msg.startsWith("[Edit]")) {
-        console.log("Editing admin...");
-        handleEdit(ws, msg);
-      } else if (msg.startsWith("[FetchAdmins]")) {
-        console.log("Fetching admins upon request...");
-        fetchAdmins(ws, msg);
+      if (msg.trim().startsWith("[Fetch_Users]")) {
+        console.log("Fetching users request received");
+        handleFetchUsers(ws, msg);
+      } else if (msg.trim().startsWith("[Fetch_Transactions]")) {
+        console.log("Fetching transactions request received");
+        handleFetchTransactions(ws, msg);
+      } else if (msg.trim().startsWith("[Fetch_All]")) {
+        console.log("Fetching everything received");
+        handleFetchAllUserData(ws, msg);
       } else {
         console.log("Unknown command received.");
         ws.send("[ERROR] Unknown command.");
@@ -56,13 +41,15 @@ function startAdminSocket() {
     });
 
     ws.on("close", () => {
-      console.log("A client disconnected.");
+      console.log("(Socket 3) WebSocket connection closed");
     });
 
     ws.on("error", (error) => {
-      console.error("WebSocket error:", error);
+      console.error("(Socket 3) WebSocket error:", error);
     });
   });
+
+  console.log(`(Socket 3) WebSocket server started on port`, port);
 }
 
-export default startAdminSocket;
+export default startSocket3;
