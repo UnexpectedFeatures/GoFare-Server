@@ -6,6 +6,7 @@ import startSocket1 from "./Websockets/serverSocket1.js";
 import startSocket2 from "./Websockets/serverSocket2.js";
 import { sendTransactionNotification } from "./Services/firebaseNotification.js";
 import runSimulation from "./Services/trainRunner.js";
+import paypalRoutes from "./Routes/paypalRoutes.js";
 
 dotenv.config();
 const app = express();
@@ -14,10 +15,11 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cors());
 
+app.use("/api/paypal", paypalRoutes);
+
 async function initializeApp() {
   try {
     console.log("Tables have been created or checked.");
-
     console.log("Values have been inserted or checked.");
 
     const server = app.listen(process.env.WS_PORT, () => {
