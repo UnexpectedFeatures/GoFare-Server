@@ -1,7 +1,7 @@
 import { WebSocketServer } from "ws";
 import WebSocket from "ws";
 import dotenv from "dotenv";
-import { findUserByRfid } from "../Controllers/userController.js";
+import { findUserByRfidOrNfc } from "../Controllers/userController.js";
 
 dotenv.config();
 
@@ -56,7 +56,7 @@ function startSocket1() {
         lastScannedMap.set(rfid, now);
 
         try {
-          const userInfo = await findUserByRfid(rfid);
+          const userInfo = await findUserByRfidOrNfc(rfid);
           if (userInfo) {
             ws.send(
               JSON.stringify({
