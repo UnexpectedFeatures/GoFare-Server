@@ -59,8 +59,10 @@ export async function handleInsertUser(ws, message) {
     const docRef = firestore.collection("Users").doc(userId);
     const docSnapshot = await docRef.get();
 
+    const isNewUser = !docSnapshot.exists;
+
     try {
-      if (!docSnapshot.exists) {
+      if (isNewUser) {
         await admin.auth().createUser(authUserData);
         console.log(`Auth: Created user ${userId}`);
       } else {
@@ -74,18 +76,18 @@ export async function handleInsertUser(ws, message) {
     }
 
     try {
-      if (!docSnapshot.exists) {
+      if (isNewUser) {
         await docRef.set(dbUserData);
         console.log(`Firestore: Created document for ${userId}`);
       } else {
         dbUserData.creationDate =
-          docSnapshot.data().creationDate || creationDate; 
+          docSnapshot.data().creationDate || creationDate;
         await docRef.update(dbUserData);
         console.log(`Firestore: Updated document for ${userId}`);
       }
     } catch (dbError) {
       console.error("Firestore Error:", dbError.message);
-      if (!docSnapshot.exists) {
+      if (isNewUser) {
         try {
           await admin.auth().deleteUser(userId);
           console.log(`Rollback: Deleted user ${userId}`);
@@ -95,6 +97,62 @@ export async function handleInsertUser(ws, message) {
       }
       ws.send(`[Insert_User_Response] Error: ${dbError.message}`);
       return;
+    }
+
+    if (isNewUser) {
+      try {
+        const userRfidData = {
+          nfc: null,
+          registeredAt: null,
+          renewedAt: null,
+          rfid: null,
+          updateDate: timestamp,
+        };
+        await firestore.collection("UserRFID").doc(userId).set(userRfidData);
+        console.log(`Created UserRfid document for ${userId}`);
+
+        const userPinData = {
+          pin: null,
+          updatedAt: null,
+          updateDate: timestamp,
+        };
+        await firestore.collection("UserPin").doc(userId).set(userPinData);
+        console.log(`Created UserPin document for ${userId}`);
+
+        const userWalletData = {
+          balance: 0,
+          currency: "PHP",
+          loaned: false,
+          loanedAmount: 0,
+          updateDate: timestamp,
+        };
+        await firestore
+          .collection("UserWallet")
+          .doc(userId)
+          .set(userWalletData);
+        console.log(`Created UserWallet document for ${userId}`);
+      } catch (secondaryCollectionsError) {
+        console.error(
+          "Error creating secondary collections:",
+          secondaryCollectionsError.message
+        );
+        try {
+          await admin.auth().deleteUser(userId);
+          await firestore.collection("Users").doc(userId).delete();
+          await firestore.collection("UserRFID").doc(userId).delete();
+          await firestore.collection("UserPin").doc(userId).delete();
+          await firestore.collection("UserWallet").doc(userId).delete();
+          console.log(
+            `Rollback: Deleted user ${userId} and all related documents`
+          );
+        } catch (rollbackError) {
+          console.error("Rollback failed:", rollbackError.message);
+        }
+        ws.send(
+          `[Insert_User_Response] Error: Failed to create secondary collections - ${secondaryCollectionsError.message}`
+        );
+        return;
+      }
     }
 
     ws.send(`[Insert_User_Response] Success: User ${userId} created/updated`);

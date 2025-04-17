@@ -13,10 +13,10 @@ export async function handleDeleteUser(ws, message) {
     }
 
     const firestore = admin.firestore();
-    const docRef = firestore.collection("Users").doc(userId);
-    const docSnapshot = await docRef.get();
+    const userDocRef = firestore.collection("Users").doc(userId);
+    const userDocSnapshot = await userDocRef.get();
 
-    if (!docSnapshot.exists) {
+    if (!userDocSnapshot.exists) {
       ws.send(
         `[Delete_User_Response] Error: User with userId ${userId} not found`
       );
@@ -33,15 +33,34 @@ export async function handleDeleteUser(ws, message) {
     }
 
     try {
-      await docRef.delete();
-      console.log(`Firestore: Deleted document for ${userId}`);
+      const batch = firestore.batch();
+
+      batch.delete(userDocRef);
+
+      const userRfidRef = firestore.collection("UserRFID").doc(userId);
+      batch.delete(userRfidRef);
+
+      const userPinRef = firestore.collection("UserPin").doc(userId);
+      batch.delete(userPinRef);
+
+      const userWalletRef = firestore.collection("UserWallet").doc(userId);
+      batch.delete(userWalletRef);
+
+      await batch.commit();
+
+      console.log(
+        `Firestore: Deleted documents for user ${userId} and all related collections (Users, UserRFID, UserPin, UserWallet)`
+      );
     } catch (dbError) {
       console.error("Firestore Error:", dbError.message);
+
       ws.send(`[Delete_User_Response] Error: ${dbError.message}`);
       return;
     }
 
-    ws.send(`[Delete_User_Response] Success: User ${userId} deleted`);
+    ws.send(
+      `[Delete_User_Response] Success: User ${userId} and all related data (including wallet) deleted`
+    );
   } catch (error) {
     console.error("General Error:", error.message);
     ws.send(`[Delete_User_Response] Error: ${error.message}`);

@@ -54,14 +54,14 @@ export async function findUserByRfidOrNfc(rfidOrNfc) {
     }
 
     let walletData = null;
-    const walletRef = db.collection("UserWallet").doc(rfidOrNfc);
+    const walletRef = db.collection("UserWallet").doc(userId);
     const walletDoc = await walletRef.get();
 
     if (walletDoc.exists) {
       walletData = walletDoc.data();
-      scanningLogger.info(`Wallet found for ${searchType}: ${rfidOrNfc}`);
+      scanningLogger.info(`Wallet found for user ID: ${userId}`);
     } else {
-      scanningLogger.warn(`Wallet not found for ${searchType}: ${rfidOrNfc}`);
+      scanningLogger.warn(`Wallet not found for user ID: ${userId}`);
     }
 
     const result = await assignPickupOrDropoff(rfidOrNfc);
