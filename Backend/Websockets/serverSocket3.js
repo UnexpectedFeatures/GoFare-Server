@@ -7,6 +7,9 @@ import { handleFetchAdmins } from "../Controllers/fetchAdmins.js";
 import { handleInsertAdmin } from "../Controllers/insertAdmins.js";
 import { handleDeleteAdmin } from "../Controllers/deleteAdmin.js";
 import { handleUpdateAdmin } from "../Controllers/updateAdmin.js";
+import { handleInsertUser } from "../Controllers/insertUsers.js";
+import { handleDeleteUser } from "../Controllers/deleteUser.js";
+import { handleUpdateUser } from "../Controllers/updateUser.js";
 
 dotenv.config();
 
@@ -50,6 +53,15 @@ function startSocket3() {
       } else if (msg.trim().startsWith("[Update_Admin]")) {
         console.log("Update admin request received");
         handleUpdateAdmin(ws, msg);
+      } else if (msg.trim().startsWith("[Insert_User]")) {
+        console.log("Update admin request received");
+        handleInsertUser(ws, msg);
+      } else if (msg.trim().startsWith("[Delete_User]")) {
+        console.log("Update admin request received");
+        handleDeleteUser(ws, msg);
+      } else if (msg.trim().startsWith("[Update_User]")) {
+        console.log("Update admin request received");
+        handleUpdateUser(ws, msg);
       } else {
         console.log("Unknown command received.");
         ws.send("[ERROR] Unknown command.");

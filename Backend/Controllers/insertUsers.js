@@ -11,18 +11,25 @@ function generateUserId() {
   return userId;
 }
 
-export async function handleInsertAdmin(ws, message) {
+export async function handleInsertUser(ws, message) {
   try {
-    const cleanedMessage = message.replace("[Insert_Admin] ", "");
+    const cleanedMessage = message.replace("[Insert_User] ", "");
     const parsed = JSON.parse(cleanedMessage);
 
     const userId = generateUserId();
     const userData = parsed.data;
 
     if (!userId || !userData.email) {
-      ws.send("[Insert_Admin_Response] Error: User ID and email are required");
+      ws.send("[Insert_User_Response] Error: User ID and email are required");
       return;
     }
+
+    const now = new Date();
+    const creationDate = `${String(now.getMonth() + 1).padStart(
+      2,
+      "0"
+    )}/${String(now.getDate()).padStart(2, "0")}/${now.getFullYear()}`;
+    const timestamp = admin.firestore.Timestamp.now();
 
     const authUserData = {
       uid: userId,
@@ -34,15 +41,22 @@ export async function handleInsertAdmin(ws, message) {
     };
 
     const dbUserData = {
+      address: userData.address || null,
+      age: typeof userData.age === "number" ? userData.age : null,
+      birthday: userData.birthday || null,
+      contactNumber: userData.contactNumber || null,
       email: userData.email,
       firstName: userData.firstName || null,
-      middleName: userData.middleName || null,
+      gender: userData.gender || null,
       lastName: userData.lastName || null,
-      password: userData.password || null,
+      middleName: userData.middleName || null,
+      enabled: true,
+      creationDate: creationDate,
+      updateDate: timestamp,
     };
 
     const firestore = admin.firestore();
-    const docRef = firestore.collection("Admins").doc(userId);
+    const docRef = firestore.collection("Users").doc(userId);
     const docSnapshot = await docRef.get();
 
     try {
@@ -55,7 +69,7 @@ export async function handleInsertAdmin(ws, message) {
       }
     } catch (authError) {
       console.error("Auth Error:", authError.message);
-      ws.send(`[Insert_Admin_Response] Error: ${authError.message}`);
+      ws.send(`[Insert_User_Response] Error: ${authError.message}`);
       return;
     }
 
@@ -64,6 +78,8 @@ export async function handleInsertAdmin(ws, message) {
         await docRef.set(dbUserData);
         console.log(`Firestore: Created document for ${userId}`);
       } else {
+        dbUserData.creationDate =
+          docSnapshot.data().creationDate || creationDate; 
         await docRef.update(dbUserData);
         console.log(`Firestore: Updated document for ${userId}`);
       }
@@ -77,13 +93,13 @@ export async function handleInsertAdmin(ws, message) {
           console.error("Rollback failed:", rollbackError.message);
         }
       }
-      ws.send(`[Insert_Admin_Response] Error: ${dbError.message}`);
+      ws.send(`[Insert_User_Response] Error: ${dbError.message}`);
       return;
     }
 
-    ws.send(`[Insert_Admin_Response] Success: Admin ${userId} created/updated`);
+    ws.send(`[Insert_User_Response] Success: User ${userId} created/updated`);
   } catch (error) {
     console.error("General Error:", error.message);
-    ws.send(`[Insert_Admin_Response] Error: ${error.message}`);
+    ws.send(`[Insert_User_Response] Error: ${error.message}`);
   }
 }
