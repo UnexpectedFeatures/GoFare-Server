@@ -1,6 +1,7 @@
 import winston from "winston";
 import path from "path";
 import fs from "fs";
+import moment from "moment-timezone";
 
 const logDirectory = path.join(process.cwd(), "logs");
 if (!fs.existsSync(logDirectory)) {
@@ -11,7 +12,9 @@ function createLogger(fileName) {
   return winston.createLogger({
     level: "info",
     format: winston.format.combine(
-      winston.format.timestamp(),
+      winston.format.timestamp({
+        format: () => moment().tz("Asia/Manila").format("YYYY-MM-DD HH:mm:ss"),
+      }),
       winston.format.printf(({ timestamp, level, message }) => {
         return `[${timestamp}] ${level.toUpperCase()}: ${message}`;
       })
