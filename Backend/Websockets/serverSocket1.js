@@ -8,6 +8,9 @@ dotenv.config();
 export const allClients = new Set();
 let socket2Client = null;
 
+const lastScannedMap = new Map();
+const COOLDOWN_MS = 5000;
+
 export function broadcastToAll(senderWs, message, clientsSet) {
   clientsSet.forEach((client) => {
     if (client !== senderWs && client.readyState === WebSocket.OPEN) {
@@ -34,6 +37,24 @@ function startSocket1() {
 
       if (msg.startsWith("Card Scanned:")) {
         const rfid = msg.substring(13).trim();
+        const now = Date.now();
+
+        const lastScannedTime = lastScannedMap.get(rfid);
+
+        if (lastScannedTime && now - lastScannedTime < COOLDOWN_MS) {
+          console.log(`(Socket 1) RFID ${rfid} ignored (cooldown active)`);
+          ws.send(
+            JSON.stringify({
+              type: "COOLDOWN",
+              message:
+                "This card was just scanned. Please wait 5 seconds before trying again.",
+            })
+          );
+          return;
+        }
+
+        lastScannedMap.set(rfid, now);
+
         try {
           const userInfo = await findUserByRfid(rfid);
           if (userInfo) {
@@ -83,5 +104,14 @@ function startSocket1() {
 
   console.log(`(Socket 1) WebSocket server started on port`, port);
 }
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [rfid, timestamp] of lastScannedMap.entries()) {
+    if (now - timestamp > COOLDOWN_MS) {
+      lastScannedMap.delete(rfid);
+    }
+  }
+}, 60000);
 
 export default startSocket1;

@@ -44,7 +44,7 @@ export async function handleUpdateUser(ws, message) {
     }
 
     try {
-      updatedData.updatedDate = admin.firestore.FieldValue.serverTimestamp();
+      updatedData.updateDate = admin.firestore.FieldValue.serverTimestamp();
 
       await docRef.update(updatedData);
       console.log(`Firestore: Updated document for ${userId}`);
