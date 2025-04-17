@@ -17,26 +17,46 @@ function getFormattedGMT8() {
   return gmt8Time.replace(",", "");
 }
 
-export async function assignPickupOrDropoff(rfid) {
+async function getUserIdFromRfidOrNfc(rfidOrNfc) {
+  let userQuery = await db
+    .collection("UserRFID")
+    .where("rfid", "==", rfidOrNfc)
+    .limit(1)
+    .get();
+
+  if (!userQuery.empty) {
+    return userQuery.docs[0].id;
+  }
+
+  userQuery = await db
+    .collection("UserRFID")
+    .where("nfc", "==", rfidOrNfc)
+    .limit(1)
+    .get();
+
+  if (!userQuery.empty) {
+    return userQuery.docs[0].id;
+  }
+
+  return null;
+}
+
+export async function assignPickupOrDropoff(rfidOrNfc) {
   try {
     const timestamp = getFormattedGMT8();
-    scanningLogger.info(`Assigning action for RFID: ${rfid} at ${timestamp}`);
+    scanningLogger.info(
+      `Assigning action for RFID/NFC: ${rfidOrNfc} at ${timestamp}`
+    );
 
-    const userQuery = await db
-      .collection("UserRFID")
-      .where("rfid", "==", rfid)
-      .limit(1)
-      .get();
+    const userId = await getUserIdFromRfidOrNfc(rfidOrNfc);
 
-    if (userQuery.empty) {
-      scanningLogger.warn(`RFID not recognized: ${rfid}`);
+    if (!userId) {
+      scanningLogger.warn(`RFID/NFC not recognized: ${rfidOrNfc}`);
       return { status: "USER_NOT_FOUND" };
     }
 
-    const userRfidDoc = userQuery.docs[0];
-    const userId = userRfidDoc.id;
-
     const userDoc = await db.collection("Users").doc(userId).get();
+
     if (!userDoc.exists) {
       scanningLogger.warn(`User document not found for ID: ${userId}`);
       return { status: "USER_DOCUMENT_NOT_FOUND" };
@@ -130,7 +150,7 @@ export async function assignPickupOrDropoff(rfid) {
     const wsMessage = {
       type: "TRIP_UPDATE",
       data: {
-        rfid: rfid,
+        rfidOrNfc: rfidOrNfc,
         userId: userId,
         userName: userName,
         action: action,

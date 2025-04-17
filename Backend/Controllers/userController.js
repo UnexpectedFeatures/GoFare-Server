@@ -2,55 +2,55 @@ import db from "../database.js";
 import { assignPickupOrDropoff } from "./userAssignment.js";
 import { scanningLogger } from "../Services/logger.js";
 
+async function getUserIdFromRfidOrNfc(rfidOrNfc) {
+  let userQuery = await db
+    .collection("UserRFID")
+    .where("rfid", "==", rfidOrNfc)
+    .limit(1)
+    .get();
+
+  if (!userQuery.empty) {
+    return userQuery.docs[0].id;
+  }
+
+  userQuery = await db
+    .collection("UserRFID")
+    .where("nfc", "==", rfidOrNfc)
+    .limit(1)
+    .get();
+
+  if (!userQuery.empty) {
+    return userQuery.docs[0].id;
+  }
+
+  return null;
+}
+
 export async function findUserByRfidOrNfc(rfidOrNfc) {
   try {
     scanningLogger.info(`RFID/NFC scanned: ${rfidOrNfc}`);
 
-    let userQuery = await db
-      .collection("UserRFID")
-      .where("rfid", "==", rfidOrNfc)
-      .limit(1)
-      .get();
+    const userId = await getUserIdFromRfidOrNfc(rfidOrNfc);
 
-    let searchType = "RFID";
-
-    if (userQuery.empty) {
-      scanningLogger.warn(`No user found with RFID: ${rfidOrNfc}`);
-      scanningLogger.info(`Attempting to search by NFC instead.`);
-
-      userQuery = await db
-        .collection("UserRFID")
-        .where("nfc", "==", rfidOrNfc)
-        .limit(1)
-        .get();
-
-      searchType = "NFC";
-
-      if (userQuery.empty) {
-        scanningLogger.warn(`No user found with NFC: ${rfidOrNfc}`);
-        return null;
-      }
+    if (!userId) {
+      scanningLogger.warn(`No user found with RFID/NFC: ${rfidOrNfc}`);
+      return null;
     }
 
-    const userDoc = userQuery.docs[0];
-    const userData = userDoc.data();
-    const userRfidDocId = userDoc.id;
+    const userRfidDoc = await db.collection("UserRFID").doc(userId).get();
+    const userData = userRfidDoc.data();
+    const searchType = userData.rfid === rfidOrNfc ? "RFID" : "NFC";
 
-    scanningLogger.info(
-      `Found ${searchType} document with ID: ${userRfidDocId}`
-    );
+    scanningLogger.info(`Found ${searchType} document with ID: ${userId}`);
 
-    const userRef = db.collection("Users").doc(userRfidDocId);
-    const userDocSnapshot = await userRef.get();
+    const userDocSnapshot = await db.collection("Users").doc(userId).get();
 
     let linkedUserData = null;
     if (userDocSnapshot.exists) {
       linkedUserData = userDocSnapshot.data();
-      scanningLogger.info(`Linked User document found: ${userRfidDocId}`);
+      scanningLogger.info(`Linked User document found: ${userId}`);
     } else {
-      scanningLogger.warn(
-        `Linked User document not found for ID: ${userRfidDocId}`
-      );
+      scanningLogger.warn(`Linked User document not found for ID: ${userId}`);
     }
 
     let walletData = null;
@@ -70,11 +70,11 @@ export async function findUserByRfidOrNfc(rfidOrNfc) {
     return {
       userData: {
         ...userData,
-        documentId: userRfidDocId,
+        documentId: userId,
         searchedBy: searchType,
       },
       linkedUserData: linkedUserData
-        ? { ...linkedUserData, documentId: userRfidDocId }
+        ? { ...linkedUserData, documentId: userId }
         : null,
       walletData: walletData,
       walletExists: walletData !== null,
