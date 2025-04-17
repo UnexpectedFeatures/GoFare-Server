@@ -16,11 +16,6 @@ export async function handleInsertAdmin(ws, message) {
     const cleanedMessage = message.replace("[Insert_Admin] ", "");
     const parsed = JSON.parse(cleanedMessage);
 
-    if (parsed.command !== "Insert_Admin") {
-      ws.send(`[Insert_Admin_Response] Error: Invalid command`);
-      return;
-    }
-
     const userId = generateUserId();
     const userData = parsed.data;
 
