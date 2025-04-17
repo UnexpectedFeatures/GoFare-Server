@@ -3,6 +3,8 @@ import dotenv from "dotenv";
 import { handleFetchUsers } from "../Controllers/fetchUsers.js";
 import { handleFetchTransactions } from "../Controllers/fetchTransactions.js";
 import { handleFetchAllUserData } from "../Controllers/fetchEverything.js";
+import { handleFetchAdmins } from "../Controllers/fetchAdmins.js";
+import { handleInsertAdmin } from "../Controllers/insertAdmins.js";
 
 dotenv.config();
 
@@ -34,6 +36,12 @@ function startSocket3() {
       } else if (msg.trim().startsWith("[Fetch_All]")) {
         console.log("Fetching everything received");
         handleFetchAllUserData(ws, msg);
+      } else if (msg.trim().startsWith("[Fetch_Admins]")) {
+        console.log("Fetching admins request received");
+        handleFetchAdmins(ws, msg);
+      } else if (msg.trim().startsWith("[Insert_Admin]")) {
+        console.log("Insert admin request received");
+        handleInsertAdmin(ws, msg);
       } else {
         console.log("Unknown command received.");
         ws.send("[ERROR] Unknown command.");
