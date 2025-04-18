@@ -10,6 +10,9 @@ import { handleUpdateAdmin } from "../Controllers/updateAdmin.js";
 import { handleInsertUser } from "../Controllers/insertUsers.js";
 import { handleDeleteUser } from "../Controllers/deleteUser.js";
 import { handleUpdateUser } from "../Controllers/updateUser.js";
+import { handleFetchRefundRequests } from "../Controllers/fetchRefundRequests.js";
+import { handleApproveRefund } from "../Controllers/approveRefund.js";
+import { handleRejectRefund } from "../Controllers/rejectRefund.js";
 
 dotenv.config();
 
@@ -62,7 +65,16 @@ function startSocket3() {
       } else if (msg.trim().startsWith("[Update_User]")) {
         console.log("Update admin request received");
         handleUpdateUser(ws, msg);
-      } else {
+      } else if(msg.trim().startsWith("[FetchRefunds]")){
+        console.log("Fetching refunds request received");
+        handleFetchRefundRequests(ws, msg);
+      }else if(msg.trim().startsWith("[ApproveRefund]")){
+        console.log("Approve refund request received");
+        handleApproveRefund(ws, msg);
+      }else if(msg.trim().startsWith("[RejectRefund]")){
+        console.log("Reject refund request received");
+        handleRejectRefund(ws, msg);
+      }else {
         console.log("Unknown command received.");
         ws.send("[ERROR] Unknown command.");
       }
