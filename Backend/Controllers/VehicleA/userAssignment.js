@@ -12,53 +12,43 @@ function getFormattedGMT8() {
     minute: "2-digit",
     hour12: true,
   };
-
-  const gmt8Time = new Intl.DateTimeFormat("en-US", options).format(new Date());
-  return gmt8Time.replace(",", "");
+  return new Intl.DateTimeFormat("en-US", options)
+    .format(new Date())
+    .replace(",", "");
 }
 
 async function getUserIdFromRfidOrNfc(rfidOrNfc) {
-  let userQuery = await db
+  const userQuery = await db
     .collection("UserRFID")
     .where("rfid", "==", rfidOrNfc)
     .limit(1)
     .get();
 
-  if (!userQuery.empty) {
-    return userQuery.docs[0].id;
-  }
-
-  userQuery = await db
-    .collection("UserRFID")
-    .where("nfc", "==", rfidOrNfc)
-    .limit(1)
-    .get();
-
-  if (!userQuery.empty) {
-    return userQuery.docs[0].id;
-  }
-
-  return null;
+  return !userQuery.empty
+    ? userQuery.docs[0].id
+    : (
+        await db
+          .collection("UserRFID")
+          .where("nfc", "==", rfidOrNfc)
+          .limit(1)
+          .get()
+      ).docs[0]?.id || null;
 }
 
 export async function assignPickupOrDropoff(rfidOrNfc) {
+  const timestamp = getFormattedGMT8();
+  scanningLogger.info(`Processing RFID/NFC: ${rfidOrNfc} at ${timestamp}`);
+
   try {
-    const timestamp = getFormattedGMT8();
-    scanningLogger.info(
-      `Assigning action for RFID/NFC: ${rfidOrNfc} at ${timestamp}`
-    );
-
     const userId = await getUserIdFromRfidOrNfc(rfidOrNfc);
-
     if (!userId) {
-      scanningLogger.warn(`RFID/NFC not recognized: ${rfidOrNfc}`);
+      scanningLogger.warn(`Unrecognized RFID/NFC: ${rfidOrNfc}`);
       return { status: "USER_NOT_FOUND" };
     }
 
     const userDoc = await db.collection("Users").doc(userId).get();
-
     if (!userDoc.exists) {
-      scanningLogger.warn(`User document not found for ID: ${userId}`);
+      scanningLogger.warn(`Missing user document: ${userId}`);
       return { status: "USER_DOCUMENT_NOT_FOUND" };
     }
 
@@ -72,13 +62,11 @@ export async function assignPickupOrDropoff(rfidOrNfc) {
       .get();
 
     if (!currentTrainDoc.exists || !currentTrainDoc.data().stopName) {
-      scanningLogger.error("Train current position not found or invalid");
+      scanningLogger.error("Invalid train position data");
       return { status: "TRAIN_POSITION_INVALID" };
     }
 
-    const stopName = currentTrainDoc.data().stopName;
-    const currentVehicle = currentTrainDoc.data().vehicle || "a";
-
+    const { stopName, vehicle: currentVehicle = "a" } = currentTrainDoc.data();
     const assignmentsCollection = db.collection("UserAssignments");
 
     const activeTripsQuery = await assignmentsCollection
@@ -88,37 +76,35 @@ export async function assignPickupOrDropoff(rfidOrNfc) {
       .limit(1)
       .get();
 
-    let action = "";
-    let assignmentRef = null;
-    let assignmentData = {};
-
     if (!activeTripsQuery.empty) {
-      const activeTrip = activeTripsQuery.docs[0].data();
-      assignmentRef = assignmentsCollection.doc(activeTripsQuery.docs[0].id);
+      const activeTripDoc = activeTripsQuery.docs[0];
+      const activeTrip = activeTripDoc.data();
+      const assignmentRef = assignmentsCollection.doc(activeTripDoc.id);
 
       if (activeTrip.vehicle !== currentVehicle) {
         scanningLogger.warn(
-          `User ${userName} attempted to board vehicle ${currentVehicle} while having active trip on vehicle ${activeTrip.vehicle}`
+          `Vehicle mismatch for ${userName} (${activeTrip.vehicle} vs ${currentVehicle})`
         );
         return {
           status: "ACTIVE_TRIP_ON_ANOTHER_VEHICLE",
-          currentVehicle: currentVehicle,
+          currentVehicle,
           activeTripVehicle: activeTrip.vehicle,
-          message: "Cannot board another vehicle while having an active trip",
+          message: "Cannot switch vehicles mid-trip",
         };
       }
 
+      let action, assignmentData;
+
       if (!activeTrip.dropoffStop) {
-        if (activeTrip.pickupStop === stopName) {
+        if (
+          activeTrip.status === "awaiting_dropoff" &&
+          activeTrip.pickupStop === stopName
+        ) {
           assignmentData = {
             status: "in_progress",
             updatedAt: timestamp,
           };
-          action =
-            currentVehicle === "a"
-              ? `PICKUP_A_CONFIRMED`
-              : `PICKUP_B_CONFIRMED`;
-          await assignmentRef.update(assignmentData);
+          action = `PICKUP_${currentVehicle.toUpperCase()}_CONFIRMED`;
         } else {
           assignmentData = {
             dropoffStop: stopName,
@@ -127,26 +113,21 @@ export async function assignPickupOrDropoff(rfidOrNfc) {
             completedAt: timestamp,
             updatedAt: timestamp,
           };
-          action = currentVehicle === "a" ? `DROPOFF_A` : `DROPOFF_B`;
-          await assignmentRef.update(assignmentData);
+          action = `DROPOFF_${currentVehicle.toUpperCase()}`;
         }
 
-        const updatedAssignment = {
-          ...activeTrip,
-          ...assignmentData,
-        };
-
-        scanningLogger.info(`${action} [User: ${userName}] at ${timestamp}`);
+        await assignmentRef.update(assignmentData);
+        const updatedAssignment = { ...activeTrip, ...assignmentData };
 
         const wsMessage = {
           type: "TRIP_UPDATE",
           data: {
-            rfidOrNfc: rfidOrNfc,
-            userId: userId,
-            userName: userName,
-            action: action,
-            timestamp: timestamp,
-            stopName: stopName,
+            rfidOrNfc,
+            userId,
+            userName,
+            action,
+            timestamp,
+            stopName,
             status: updatedAssignment.status,
             pickupStop: updatedAssignment.pickupStop,
             pickupTime: updatedAssignment.pickupTime,
@@ -162,80 +143,55 @@ export async function assignPickupOrDropoff(rfidOrNfc) {
         return {
           status: "ASSIGNED",
           action,
-          timestamp: timestamp,
+          timestamp,
           assignmentData: updatedAssignment,
           assignmentId: assignmentRef.id,
-          user: {
-            ...userData,
-            documentId: userId,
-          },
+          user: { ...userData, documentId: userId },
           vehicle: currentVehicle,
         };
       }
     }
 
-    if (currentVehicle === "a") {
-      assignmentRef = assignmentsCollection.doc();
-      assignmentData = {
-        userId: userId,
-        userName: userName,
-        vehicle: currentVehicle,
-        pickupStop: stopName,
-        pickupTime: timestamp,
-        dropoffStop: null,
-        dropoffTime: null,
-        status: "awaiting_dropoff",
-        createdAt: timestamp,
-        updatedAt: timestamp,
-      };
-      action = `PICKUP_A`;
-      await assignmentRef.set(assignmentData);
-    } else if (currentVehicle === "b") {
-      const completedATripQuery = await assignmentsCollection
+    if (currentVehicle === "b") {
+      const completedATrip = await assignmentsCollection
         .where("userId", "==", userId)
         .where("vehicle", "==", "a")
         .where("status", "==", "completed")
         .limit(1)
         .get();
 
-      if (completedATripQuery.empty) {
-        scanningLogger.warn(
-          `User must complete a trip on vehicle A before using vehicle B`
-        );
+      if (completedATrip.empty) {
+        scanningLogger.warn(`User ${userName} needs completed A trip before B`);
         return { status: "VEHICLE_A_REQUIRED_FIRST" };
       }
-
-      assignmentRef = assignmentsCollection.doc();
-      assignmentData = {
-        userId: userId,
-        userName: userName,
-        vehicle: currentVehicle,
-        pickupStop: stopName,
-        pickupTime: timestamp,
-        dropoffStop: null,
-        dropoffTime: null,
-        status: "awaiting_dropoff",
-        createdAt: timestamp,
-        updatedAt: timestamp,
-      };
-      action = `PICKUP_B`;
-      await assignmentRef.set(assignmentData);
-    } else {
-      scanningLogger.warn(`Invalid vehicle type: ${currentVehicle}`);
-      return { status: "INVALID_VEHICLE_TYPE" };
     }
 
-    scanningLogger.info(`${action} [User: ${userName}] at ${timestamp}`);
+    const assignmentRef = assignmentsCollection.doc();
+    const action = `PICKUP_${currentVehicle.toUpperCase()}`;
+    const assignmentData = {
+      userId,
+      userName,
+      vehicle: currentVehicle,
+      pickupStop: stopName,
+      pickupTime: timestamp,
+      dropoffStop: null,
+      dropoffTime: null,
+      status: "awaiting_dropoff",
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    };
+
+    await assignmentRef.set(assignmentData);
 
     const wsMessage = {
       type: "TRIP_UPDATE",
       data: {
-        rfidOrNfc: rfidOrNfc,
-        userId: userId,
-        userName: userName,
-        action: action,
-        timestamp: timestamp,
-        stopName: stopName,
+        rfidOrNfc,
+        userId,
+        userName,
+        action,
+        timestamp,
+        stopName,
         status: assignmentData.status,
         pickupStop: assignmentData.pickupStop,
         pickupTime: assignmentData.pickupTime,
@@ -251,17 +207,14 @@ export async function assignPickupOrDropoff(rfidOrNfc) {
     return {
       status: "ASSIGNED",
       action,
-      timestamp: timestamp,
-      assignmentData: assignmentData,
+      timestamp,
+      assignmentData,
       assignmentId: assignmentRef.id,
-      user: {
-        ...userData,
-        documentId: userId,
-      },
+      user: { ...userData, documentId: userId },
       vehicle: currentVehicle,
     };
   } catch (error) {
-    scanningLogger.error(`Error in assignPickupOrDropoff: ${error.message}`, {
+    scanningLogger.error(`Processing error: ${error.message}`, {
       stack: error.stack,
     });
     throw error;
