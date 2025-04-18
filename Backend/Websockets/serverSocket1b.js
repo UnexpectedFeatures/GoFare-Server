@@ -1,7 +1,7 @@
 import { WebSocketServer } from "ws";
 import WebSocket from "ws";
 import dotenv from "dotenv";
-import { findUserByRfidOrNfc } from "../Controllers/VehicleA/userController.js";
+import { findUserByRfidOrNfc } from "../Controllers/VehicleB/userControllerB.js";
 
 dotenv.config();
 
@@ -19,12 +19,12 @@ export function broadcastToAll(senderWs, message, clientsSet) {
   });
 }
 
-function startSocket1() {
-  const port = parseInt(process.env.WS_PORT_A, 10);
+function startSocket1b() {
+  const port = parseInt(process.env.WS_PORT_B, 10);
   const wss = new WebSocketServer({ port });
 
   wss.on("connection", (ws) => {
-    console.log("(Socket 1 Terminal 1) New client connected on port", port);
+    console.log("(Socket 1 Terminal 2) New client connected on port", port);
     allClients.add(ws);
 
     if (socket2Client && socket2Client.readyState === WebSocket.OPEN) {
@@ -33,7 +33,7 @@ function startSocket1() {
 
     ws.on("message", async (message) => {
       const msg = message.toString();
-      console.log("(Socket 1 Terminal 1) Message received:", msg);
+      console.log("(Socket 1 Terminal 2) Message received:", msg);
 
       if (msg.startsWith("Card Scanned:")) {
         const rfid = msg.substring(13).trim();
@@ -42,7 +42,7 @@ function startSocket1() {
         const lastScannedTime = lastScannedMap.get(rfid);
 
         if (lastScannedTime && now - lastScannedTime < COOLDOWN_MS) {
-          console.log(`(Socket 1 Terminal 1) RFID ${rfid} ignored (cooldown active)`);
+          console.log(`(Socket 1 Terminal 2) RFID ${rfid} ignored (cooldown active)`);
           ws.send(
             JSON.stringify({
               type: "COOLDOWN",
@@ -93,16 +93,16 @@ function startSocket1() {
     });
 
     ws.on("close", () => {
-      console.log("(Socket 1 Terminal 1) WebSocket connection closed");
+      console.log("(Socket 1 Terminal 2) WebSocket connection closed");
       allClients.delete(ws);
     });
 
     ws.on("error", (error) => {
-      console.error("(Socket 1 Terminal 1) WebSocket error:", error);
+      console.error("(Socket 1 Terminal 2) WebSocket error:", error);
     });
   });
 
-  console.log(`(Socket 1 Terminal 1) WebSocket server started on port`, port);
+  console.log(`(Socket 1 Terminal 2) WebSocket server started on port`, port);
 }
 
 setInterval(() => {
@@ -114,4 +114,4 @@ setInterval(() => {
   }
 }, 60000);
 
-export default startSocket1;
+export default startSocket1b;

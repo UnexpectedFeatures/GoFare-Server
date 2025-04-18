@@ -1,6 +1,6 @@
-import db from "../database.js";
-import { assignPickupOrDropoff } from "./userAssignment.js";
-import { scanningLogger } from "../Services/logger.js";
+import db from "../../database.js";
+import { assignPickupOrDropoff } from "./userAssignmentB.js";
+import { scanningLogger } from "../../Services/logger.js";
 
 async function getUserIdFromRfidOrNfc(rfidOrNfc) {
   let userQuery = await db
