@@ -1,4 +1,4 @@
-import db from "../database.js";
+import db from "../../database.js";
 
 export const handleFetchUsers = async (ws, message) => {
   try {

@@ -1,15 +1,15 @@
 import WebSocket, { WebSocketServer } from "ws";
 import dotenv from "dotenv";
-import { handleFetchUsers } from "../Controllers/fetchUsers.js";
+import { handleFetchUsers } from "../Controllers/Users/fetchUsers.js";
 import { handleFetchTransactions } from "../Controllers/fetchTransactions.js";
-import { handleFetchAllUserData } from "../Controllers/fetchEverything.js";
-import { handleFetchAdmins } from "../Controllers/fetchAdmins.js";
-import { handleInsertAdmin } from "../Controllers/insertAdmins.js";
-import { handleDeleteAdmin } from "../Controllers/deleteAdmin.js";
-import { handleUpdateAdmin } from "../Controllers/updateAdmin.js";
-import { handleInsertUser } from "../Controllers/insertUsers.js";
-import { handleDeleteUser } from "../Controllers/deleteUser.js";
-import { handleUpdateUser } from "../Controllers/updateUser.js";
+import { handleFetchAllUserData } from "../Controllers/Users/fetchEverything.js";
+import { handleFetchAdmins } from "../Controllers/Admins/fetchAdmins.js";
+import { handleInsertAdmin } from "../Controllers/Admins/insertAdmins.js";
+import { handleDeleteAdmin } from "../Controllers/Admins/deleteAdmin.js";
+import { handleUpdateAdmin } from "../Controllers/Admins/updateAdmin.js";
+import { handleInsertUser } from "../Controllers/Users/insertUsers.js";
+import { handleDeleteUser } from "../Controllers/Users/deleteUser.js";
+import { handleUpdateUser } from "../Controllers/Users/updateUser.js";
 import { handleFetchRefundRequests } from "../Controllers/fetchRefundRequests.js";
 import { handleApproveRefund } from "../Controllers/approveRefund.js";
 import { handleRejectRefund } from "../Controllers/rejectRefund.js";
@@ -65,16 +65,16 @@ function startSocket3() {
       } else if (msg.trim().startsWith("[Update_User]")) {
         console.log("Update admin request received");
         handleUpdateUser(ws, msg);
-      } else if(msg.trim().startsWith("[FetchRefunds]")){
+      } else if (msg.trim().startsWith("[FetchRefunds]")) {
         console.log("Fetching refunds request received");
         handleFetchRefundRequests(ws, msg);
-      }else if(msg.trim().startsWith("[ApproveRefund]")){
+      } else if (msg.trim().startsWith("[ApproveRefund]")) {
         console.log("Approve refund request received");
         handleApproveRefund(ws, msg);
-      }else if(msg.trim().startsWith("[RejectRefund]")){
+      } else if (msg.trim().startsWith("[RejectRefund]")) {
         console.log("Reject refund request received");
         handleRejectRefund(ws, msg);
-      }else {
+      } else {
         console.log("Unknown command received.");
         ws.send("[ERROR] Unknown command.");
       }
