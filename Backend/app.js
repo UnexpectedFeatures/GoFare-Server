@@ -7,6 +7,7 @@ import startSocket2 from "./Websockets/serverSocket2.js";
 import startSocket3 from "./Websockets/serverSocket3.js";
 import startSocket1b from "./Websockets/serverSocket1b.js";
 import { sendTransactionNotification } from "./Services/firebaseNotification.js";
+import { syncBalances } from "./Controllers/Stripe/stripeSyncInserter.js";
 import runSimulation from "./Services/trainRunner.js";
 import paypalRoutes from "./Routes/paypalRoutes.js";
 
