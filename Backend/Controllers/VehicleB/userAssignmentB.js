@@ -22,6 +22,41 @@ async function getUserIdFromRfidOrNfc(rfidOrNfc) {
       ).docs[0]?.id || null;
 }
 
+async function updateGlobalBankConversion(amountGBP) {
+  try {
+    const conversionRef = db.collection("GlobalBank").doc("Conversion");
+    const conversionDoc = await conversionRef.get();
+
+    if (!conversionDoc.exists) {
+      scanningLogger.warn("GlobalBank Conversion document not found");
+      await conversionRef.set({
+        PHP: 0,
+        lastUpdated: getFormattedGMT8(),
+      });
+      return;
+    }
+
+    const currentPHP = conversionDoc.data().PHP || 0;
+    const amountPHP = amountGBP;
+    const newPHPValue = currentPHP + amountPHP;
+
+    await conversionRef.update({
+      PHP: newPHPValue,
+      lastUpdated: getFormattedGMT8(),
+    });
+
+    scanningLogger.info(
+      `Added £${amountGBP.toFixed(
+        2
+      )} to PHP value (New total: ₱${newPHPValue.toFixed(2)})`
+    );
+  } catch (error) {
+    scanningLogger.error(
+      `Failed to update GlobalBank conversion: ${error.message}`
+    );
+  }
+}
+
 async function generateTransactionId(userId) {
   const transactionsRef = db.collection("UserTransaction").doc(userId);
   const transactionsDoc = await transactionsRef.get();
@@ -155,6 +190,10 @@ async function recordTransaction(
     const transactionId = await generateTransactionId(userId);
     const transactionRef = db.collection("UserTransaction").doc(userId);
 
+    const totalAmount = paymentResult.amountPaid + paymentResult.loanedAmount;
+
+    await updateGlobalBankConversion(totalAmount);
+
     const transactionData = {
       currentBalance: paymentResult.remainingBalance,
       dateTime: getFormattedGMT8(),
@@ -164,7 +203,7 @@ async function recordTransaction(
       loanedAmount: paymentResult.loanedAmount,
       pickup: assignmentData.pickupStop,
       remainingBalance: paymentResult.remainingBalance,
-      totalAmount: paymentResult.amountPaid + paymentResult.loanedAmount,
+      totalAmount: totalAmount,
       userName: userName,
       vehicle: vehicle,
       status: "completed",
@@ -177,7 +216,7 @@ async function recordTransaction(
 
     return {
       transactionId,
-      totalAmount: transactionData.totalAmount,
+      totalAmount,
       paymentResult,
     };
   } catch (error) {
@@ -335,7 +374,9 @@ export async function assignPickupOrDropoff(rfidOrNfc) {
 
     const { hasLoan, loanedAmount } = await checkUserLoanStatus(userId);
     if (hasLoan) {
-      scanningLogger.warn(`User ${userId} has existing loan of £${loanedAmount}`);
+      scanningLogger.warn(
+        `User ${userId} has existing loan of £${loanedAmount}`
+      );
       return {
         status: "LOAN_OUTSTANDING",
         message: "Please pay your existing loan first",
