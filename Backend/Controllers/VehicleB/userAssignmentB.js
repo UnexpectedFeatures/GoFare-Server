@@ -81,18 +81,18 @@ async function checkUserLoanStatus(userId) {
     const walletDoc = await walletRef.get();
 
     if (!walletDoc.exists) {
-      await walletRef.set({ balance: 0, loanAmount: 0, loaned: false });
-      return { hasLoan: false, loanAmount: 0 };
+      await walletRef.set({ balance: 0, loanedAmount: 0, loaned: false });
+      return { hasLoan: false, loanedAmount: 0 };
     }
 
     const walletData = walletDoc.data();
     return {
-      hasLoan: walletData.loaned && walletData.loanAmount > 0,
-      loanAmount: walletData.loanAmount || 0,
+      hasLoan: walletData.loaned && walletData.loanedAmount > 0,
+      loanedAmount: walletData.loanedAmount || 0,
     };
   } catch (error) {
     scanningLogger.error(`Failed to check loan status: ${error.message}`);
-    return { hasLoan: false, loanAmount: 0 };
+    return { hasLoan: false, loanedAmount: 0 };
   }
 }
 
@@ -102,12 +102,12 @@ async function processPayment(userId, amount) {
     const walletDoc = await walletRef.get();
 
     if (!walletDoc.exists) {
-      await walletRef.set({ balance: 0, loanAmount: 0, loaned: false });
+      await walletRef.set({ balance: 0, loanedAmount: 0, loaned: false });
     }
 
     const walletData = walletDoc.exists
       ? walletDoc.data()
-      : { balance: 0, loanAmount: 0, loaned: false };
+      : { balance: 0, loanedAmount: 0, loaned: false };
     const currentBalance = walletData.balance || 0;
 
     if (currentBalance >= amount) {
@@ -119,14 +119,14 @@ async function processPayment(userId, amount) {
         success: true,
         paymentStatus: "full",
         amountPaid: amount,
-        loanAmount: 0,
+        loanedAmount: 0,
         remainingBalance: currentBalance - amount,
       };
     } else {
-      const loanAmount = amount - currentBalance;
+      const loanedAmount = amount - currentBalance;
       await walletRef.update({
         balance: 0,
-        loanAmount: (walletData.loanAmount || 0) + loanAmount,
+        loanedAmount: (walletData.loanedAmount || 0) + loanedAmount,
         loaned: true,
         lastUpdated: getFormattedGMT8(),
       });
@@ -134,7 +134,7 @@ async function processPayment(userId, amount) {
         success: true,
         paymentStatus: "partial",
         amountPaid: currentBalance,
-        loanAmount,
+        loanedAmount,
         remainingBalance: 0,
       };
     }
@@ -160,11 +160,11 @@ async function recordTransaction(
       dateTime: getFormattedGMT8(),
       discount: false,
       dropoff: assignmentData.dropoffStop,
-      loaned: paymentResult.loanAmount > 0,
-      loanedAmount: paymentResult.loanAmount,
+      loaned: paymentResult.loanedAmount > 0,
+      loanedAmount: paymentResult.loanedAmount,
       pickup: assignmentData.pickupStop,
       remainingBalance: paymentResult.remainingBalance,
-      totalAmount: paymentResult.amountPaid + paymentResult.loanAmount,
+      totalAmount: paymentResult.amountPaid + paymentResult.loanedAmount,
       userName: userName,
       vehicle: vehicle,
       status: "completed",
@@ -202,7 +202,7 @@ async function sendDropoffReceipt(
         ? `FULLY PAID (£${formattedAmount})`
         : `PARTIALLY PAID (£${paymentResult.amountPaid.toFixed(
             2
-          )}) - LOAN: £${paymentResult.loanAmount.toFixed(2)}`;
+          )}) - LOAN: £${paymentResult.loanedAmount.toFixed(2)}`;
 
     const mailOptions = {
       from: process.env.MAIL_USER,
@@ -333,13 +333,13 @@ export async function assignPickupOrDropoff(rfidOrNfc) {
     const userName =
       userData.name || `${userData.firstName} ${userData.lastName}`;
 
-    const { hasLoan, loanAmount } = await checkUserLoanStatus(userId);
+    const { hasLoan, loanedAmount } = await checkUserLoanStatus(userId);
     if (hasLoan) {
-      scanningLogger.warn(`User ${userId} has existing loan of £${loanAmount}`);
+      scanningLogger.warn(`User ${userId} has existing loan of £${loanedAmount}`);
       return {
         status: "LOAN_OUTSTANDING",
         message: "Please pay your existing loan first",
-        loanAmount,
+        loanedAmount,
       };
     }
 

@@ -1,5 +1,6 @@
 import db from "../../database.js";
 import { assignPickupOrDropoff } from "./userAssignmentB.js";
+import { allClients, broadcastToAll } from "../../Websockets/serverSocket1b.js";
 import { scanningLogger } from "../../Services/logger.js";
 
 async function getUserIdFromRfidOrNfc(rfidOrNfc) {
@@ -34,18 +35,46 @@ export async function findUserByRfidOrNfc(rfidOrNfc) {
 
     if (!userId) {
       scanningLogger.warn(`No user found with RFID/NFC: ${rfidOrNfc}`);
-      return null;
+      broadcastToAll(
+        null,
+        JSON.stringify({
+          type: "SCAN_RESULT",
+          status: "not_found",
+          message: "No user found with this RFID/NFC",
+          rfid: rfidOrNfc,
+        }),
+        allClients
+      );
+      return {
+        error: "No user found with this RFID/NFC",
+        status: "not_found",
+      };
     }
 
     const userRfidDoc = await db.collection("UserRFID").doc(userId).get();
     const userData = userRfidDoc.data();
-    const searchType = userData.rfid === rfidOrNfc ? "RFID" : "NFC";
 
+    if (userData.active === false) {
+      scanningLogger.warn(`Card is deactivated for user ID: ${userId}`);
+      const errorMessage = {
+        type: "SCAN_RESULT",
+        status: "card_deactivated",
+        message: "Your card has been deactivated",
+        userId: userId,
+        rfid: rfidOrNfc,
+      };
+      broadcastToAll(null, JSON.stringify(errorMessage), allClients);
+      return {
+        error: "Your card has been deactivated",
+        status: "card_deactivated",
+      };
+    }
+
+    const searchType = userData.rfid === rfidOrNfc ? "RFID" : "NFC";
     scanningLogger.info(`Found ${searchType} document with ID: ${userId}`);
 
-    const userDocSnapshot = await db.collection("Users").doc(userId).get();
-
     let linkedUserData = null;
+    const userDocSnapshot = await db.collection("Users").doc(userId).get();
     if (userDocSnapshot.exists) {
       linkedUserData = userDocSnapshot.data();
       scanningLogger.info(`Linked User document found: ${userId}`);
@@ -60,12 +89,42 @@ export async function findUserByRfidOrNfc(rfidOrNfc) {
     if (walletDoc.exists) {
       walletData = walletDoc.data();
       scanningLogger.info(`Wallet found for user ID: ${userId}`);
+
+      if (walletData.loaned === true) {
+        scanningLogger.warn(`User has an active loan: ${userId}`);
+        const errorMessage = {
+          type: "SCAN_RESULT",
+          status: "active_loan",
+          message: "You have an active loan and cannot proceed",
+          userId: userId,
+          rfid: rfidOrNfc,
+        };
+        broadcastToAll(null, JSON.stringify(errorMessage), allClients);
+        return {
+          error: "You have an active loan and cannot proceed",
+          status: "active_loan",
+        };
+      }
     } else {
       scanningLogger.warn(`Wallet not found for user ID: ${userId}`);
     }
 
     const result = await assignPickupOrDropoff(rfidOrNfc);
     scanningLogger.info(`Assignment status: ${result.status}`);
+
+    const successMessage = {
+      type: "SCAN_RESULT",
+      status: "success",
+      userId: userId,
+      rfid: rfidOrNfc,
+      assignmentStatus: result.status,
+      userData: {
+        ...userData,
+        documentId: userId,
+        searchedBy: searchType,
+      },
+    };
+    broadcastToAll(null, JSON.stringify(successMessage), allClients);
 
     return {
       userData: {
@@ -84,6 +143,16 @@ export async function findUserByRfidOrNfc(rfidOrNfc) {
     scanningLogger.error(`Error in findUserByRfidOrNfc: ${error.message}`, {
       stack: error.stack,
     });
+    broadcastToAll(
+      null,
+      JSON.stringify({
+        type: "SCAN_RESULT",
+        status: "error",
+        message: "Error processing RFID scan",
+        error: error.message,
+      }),
+      allClients
+    );
     throw error;
   }
 }
