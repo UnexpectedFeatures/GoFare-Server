@@ -4,33 +4,41 @@ export const handleFetchTransactions = async (ws, message) => {
   try {
     console.log("Fetching transactions from Firestore...");
 
-    const transactionsSnapshot = await db.collection("UserTransaction").get();
+    const usersSnapshot = await db.collection("UserTransaction").get();
     const transactions = [];
 
-    transactionsSnapshot.forEach((doc) => {
-      const transactionData = doc.data();
+    for (const userDoc of usersSnapshot.docs) {
+      const userId = userDoc.id;
+      const userData = userDoc.data();
 
-      const transaction = {
-        id: doc.id, 
-        currentBalance: transactionData.currentBalance || 0,
-        datetime: transactionData.datetime || "",
-        discount: transactionData.discount || false,
-        dropoff: transactionData.dropoff || "",
-        loaned: transactionData.loaned || false,
-        loanedAmount: transactionData.loanedAmount || 0,
-        pickup: transactionData.pickup || "",
-        remainingBalance: transactionData.remainingBalance || 0,
-        totalAmount: transactionData.totalAmount || 0,
-      };
+      for (const [txKey, txData] of Object.entries(userData)) {
+        if (!txKey.startsWith("TX-")) continue;
 
-      Object.keys(transaction).forEach((key) => {
-        if (transaction[key] === undefined) {
-          delete transaction[key];
-        }
-      });
+        const transaction = {
+          id: `${userId}/${txKey}`,
+          userId: userId,
+          transactionKey: txKey,
+          currentBalance: txData.currentBalance || 0,
+          datetime: txData.datetime || "",
+          discount: txData.discount || false,
+          dropoff: txData.dropoff || "",
+          loaned: txData.loaned || false,
+          loanedAmount: txData.loanedAmount || 0,
+          pickup: txData.pickup || "",
+          remainingBalance: txData.remainingBalance || 0,
+          totalAmount: txData.totalAmount || 0,
+          name: txData.name || "",
+        };
 
-      transactions.push(transaction);
-    });
+        Object.keys(transaction).forEach((key) => {
+          if (transaction[key] === undefined) {
+            delete transaction[key];
+          }
+        });
+
+        transactions.push(transaction);
+      }
+    }
 
     const response = {
       type: "TRANSACTION_DATA",
