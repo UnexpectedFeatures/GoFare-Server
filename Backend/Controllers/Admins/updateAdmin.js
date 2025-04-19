@@ -1,17 +1,18 @@
-import admin from "firebase-admin";
-
 export async function handleUpdateAdmin(ws, message) {
   try {
     const cleanedMessage = message.replace("[Update_Admin] ", "");
     const parsed = JSON.parse(cleanedMessage);
 
-    const userId = parsed.userId;
-    const updatedData = parsed.updatedData;
+    const userId = parsed.id;
+    const updatedData = {
+      firstName: parsed.firstName,
+      lastName: parsed.lastName,
+      middleName: parsed.middleName,
+      email: parsed.email
+    };
 
-    if (!userId || !updatedData) {
-      ws.send(
-        "[Update_Admin_Response] Error: User ID and updated data are required"
-      );
+    if (!userId) {
+      ws.send("[Update_Admin_Response] Error: Admin ID is required");
       return;
     }
 
@@ -20,29 +21,29 @@ export async function handleUpdateAdmin(ws, message) {
     const docSnapshot = await docRef.get();
 
     if (!docSnapshot.exists) {
-      ws.send(
-        `[Update_Admin_Response] Error: Admin with userId ${userId} not found`
-      );
+      ws.send(`[Update_Admin_Response] Error: Admin with id ${userId} not found`);
       return;
     }
 
-    try {
-      const authUserData = {
-        ...(updatedData.email && { email: updatedData.email }),
-        ...(updatedData.firstName && { displayName: updatedData.firstName }),
-        ...(updatedData.password && { password: updatedData.password }),
-      };
+    // Update Firebase Auth
+    const authUserData = {
+      ...(parsed.email && { email: parsed.email }),
+      ...(parsed.firstName && { displayName: parsed.firstName }),
+      ...(parsed.password && { password: parsed.password })
+    };
 
-      if (Object.keys(authUserData).length > 0) {
+    if (Object.keys(authUserData).length > 0) {
+      try {
         await admin.auth().updateUser(userId, authUserData);
         console.log(`Auth: Updated user ${userId}`);
+      } catch (authError) {
+        console.error("Auth Error:", authError.message);
+        ws.send(`[Update_Admin_Response] Error: ${authError.message}`);
+        return;
       }
-    } catch (authError) {
-      console.error("Auth Error:", authError.message);
-      ws.send(`[Update_Admin_Response] Error: ${authError.message}`);
-      return;
     }
 
+    // Update Firestore
     try {
       await docRef.update(updatedData);
       console.log(`Firestore: Updated document for ${userId}`);

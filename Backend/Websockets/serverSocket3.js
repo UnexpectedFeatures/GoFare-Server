@@ -32,6 +32,9 @@ function startSocket3() {
     }
 
     ws.on("message", (message) => {
+      if (ws.readyState === WebSocket.OPEN) {
+        console.log("Connection is open");
+      }
       const msg = message.toString();
       console.log("RAW MESSAGE:", JSON.stringify(msg));
 

@@ -8,10 +8,15 @@ export const handleFetchAdmins = async (ws, message) => {
     const Admins = [];
 
     AdminsSnapshot.forEach((doc) => {
-      Admins.push({
-        id: doc.id,
+      const adminData = {
+        id: doc.id, // this is the document ID
         ...doc.data(),
-      });
+      };
+
+      // Log each admin's documentId and other fields
+      console.log("Admin data:", adminData);
+
+      Admins.push(adminData);
     });
 
     const response = {
@@ -21,7 +26,7 @@ export const handleFetchAdmins = async (ws, message) => {
     };
 
     if (ws.readyState === ws.OPEN) {
-      ws.send(JSON.stringify(response));
+      ws.send(`[Admins_Data] ${JSON.stringify(Admins)}`);
     } else {
       console.error("WebSocket not open, cannot send Admins data");
     }
