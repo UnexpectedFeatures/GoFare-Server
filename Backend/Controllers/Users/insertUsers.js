@@ -1,8 +1,7 @@
 import admin from "firebase-admin";
 
 function generateUserId() {
-  const characters =
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
   let userId = "";
   for (let i = 0; i < 28; i++) {
     const randomIndex = Math.floor(Math.random() * characters.length);
@@ -16,20 +15,19 @@ export async function handleInsertUser(ws, message) {
     const cleanedMessage = message.replace("[Insert_User] ", "");
     const parsed = JSON.parse(cleanedMessage);
 
-    const userId = generateUserId();
-    const userData = parsed.data;
+    console.log("Parsed message:", parsed);
 
-    if (!userId || !userData.email) {
-      ws.send("[Insert_User_Response] Error: User ID and email are required");
+    const userId = generateUserId();
+    const userData = parsed;
+
+    console.log("User data:", userData);
+
+    if (!userData || !userData.email) {
+      ws.send("[Insert_User_Response] Error: Email is required");
       return;
     }
 
-    const now = new Date();
-    const creationDate = `${String(now.getMonth() + 1).padStart(
-      2,
-      "0"
-    )}/${String(now.getDate()).padStart(2, "0")}/${now.getFullYear()}`;
-    const timestamp = admin.firestore.Timestamp.now();
+    const timestamp = admin.firestore.Timestamp.now(); // This is the correct way to create a Timestamp
 
     const authUserData = {
       uid: userId,
@@ -42,7 +40,7 @@ export async function handleInsertUser(ws, message) {
 
     const dbUserData = {
       address: userData.address || null,
-      age: typeof userData.age === "number" ? userData.age : null,
+      age: parseInt(userData.age) || null,
       birthday: userData.birthday || null,
       contactNumber: userData.contactNumber || null,
       email: userData.email,
@@ -51,7 +49,7 @@ export async function handleInsertUser(ws, message) {
       lastName: userData.lastName || null,
       middleName: userData.middleName || null,
       enabled: true,
-      creationDate: creationDate,
+      creationDate: timestamp, // Use Timestamp here
       updateDate: timestamp,
     };
 
@@ -80,8 +78,7 @@ export async function handleInsertUser(ws, message) {
         await docRef.set(dbUserData);
         console.log(`Firestore: Created document for ${userId}`);
       } else {
-        dbUserData.creationDate =
-          docSnapshot.data().creationDate || creationDate;
+        dbUserData.creationDate = docSnapshot.data().creationDate || timestamp; 
         await docRef.update(dbUserData);
         console.log(`Firestore: Updated document for ${userId}`);
       }
@@ -126,31 +123,21 @@ export async function handleInsertUser(ws, message) {
           loanedAmount: 0,
           updateDate: timestamp,
         };
-        await firestore
-          .collection("UserWallet")
-          .doc(userId)
-          .set(userWalletData);
+        await firestore.collection("UserWallet").doc(userId).set(userWalletData);
         console.log(`Created UserWallet document for ${userId}`);
       } catch (secondaryCollectionsError) {
-        console.error(
-          "Error creating secondary collections:",
-          secondaryCollectionsError.message
-        );
+        console.error("Error creating secondary collections:", secondaryCollectionsError.message);
         try {
           await admin.auth().deleteUser(userId);
           await firestore.collection("Users").doc(userId).delete();
           await firestore.collection("UserRFID").doc(userId).delete();
           await firestore.collection("UserPin").doc(userId).delete();
           await firestore.collection("UserWallet").doc(userId).delete();
-          console.log(
-            `Rollback: Deleted user ${userId} and all related documents`
-          );
+          console.log(`Rollback: Deleted user ${userId} and all related documents`);
         } catch (rollbackError) {
           console.error("Rollback failed:", rollbackError.message);
         }
-        ws.send(
-          `[Insert_User_Response] Error: Failed to create secondary collections - ${secondaryCollectionsError.message}`
-        );
+        ws.send(`[Insert_User_Response] Error: Failed to create secondary collections - ${secondaryCollectionsError.message}`);
         return;
       }
     }

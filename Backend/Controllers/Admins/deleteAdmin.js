@@ -12,11 +12,14 @@ export async function handleDeleteAdmin(ws, message) {
       return;
     }
 
+    console.log("Delete admin request received for userId:", userId);
+
     const firestore = admin.firestore();
     const docRef = firestore.collection("Admins").doc(userId);
     const docSnapshot = await docRef.get();
 
     if (!docSnapshot.exists) {
+      console.log(`Admin with userId ${userId} not found in Firestore`);
       ws.send(
         `[Delete_Admin_Response] Error: Admin with userId ${userId} not found`
       );
@@ -29,7 +32,6 @@ export async function handleDeleteAdmin(ws, message) {
     } catch (authError) {
       console.error("Auth Error:", authError.message);
       ws.send(`[Delete_Admin_Response] Error: ${authError.message}`);
-      return;
     }
 
     try {

@@ -64,7 +64,7 @@ function startSocket3() {
         console.log("Update admin request received");
         handleUpdateAdmin(ws, msg);
       } else if (msg.trim().startsWith("[Insert_User]")) {
-        console.log("Update admin request received");
+        console.log("Insert user request received");
         handleInsertUser(ws, msg);
       } else if (msg.trim().startsWith("[Delete_User]")) {
         console.log("Update admin request received");

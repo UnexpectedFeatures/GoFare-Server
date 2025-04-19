@@ -2,40 +2,40 @@ import db from "../../database.js";
 
 export const handleFetchUsers = async (ws, message) => {
   try {
-    console.log("Fetching users from Firestore...");
-
     const usersSnapshot = await db.collection("Users").get();
     const users = [];
 
+    const convertTimestamp = (field) => {
+      if (field && field.toDate) return field.toDate().toISOString();
+      return field;
+    };
+
     usersSnapshot.forEach((doc) => {
+      const d = doc.data();
       users.push({
-        id: doc.id,
-        ...doc.data(),
+        userId:       doc.id,
+        firstName:    d.firstName,
+        lastName:     d.lastName,
+        middleName:   d.middleName,
+        email:        d.email,
+        address:      d.address,
+        age:          d.age,
+        contactNumber:d.contactNumber,
+        gender:       d.gender,
+        enabled:      d.enabled,
+        creationDate: convertTimestamp(d.creationDate),
+        updateDate:   convertTimestamp(d.updateDate),
+        birthday:     d.birthday   
       });
     });
 
-    const response = {
-      type: "USERS_DATA",
-      data: users,
-      timestamp: new Date().toISOString(),
-    };
-
     if (ws.readyState === ws.OPEN) {
-      ws.send(JSON.stringify(response));
-    } else {
-      console.error("WebSocket not open, cannot send users data");
-    }
-  } catch (error) {
-    console.error("Error fetching users:", error);
-
-    const errorResponse = {
-      type: "ERROR",
-      message: "Failed to fetch users",
-      error: error.message,
-    };
-
+      ws.send(JSON.stringify(users)); 
+      console.log(JSON.stringify(users)); 
+  }
+  } catch (e) {
     if (ws.readyState === ws.OPEN) {
-      ws.send(JSON.stringify(errorResponse));
+      ws.send(`[USERS_DATA] ${JSON.stringify([])}`); 
     }
   }
 };
