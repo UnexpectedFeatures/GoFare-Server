@@ -1,0 +1,56 @@
+import db from "../database.js";
+import { conversionLogger } from "./logger.js";
+
+const convertPHPToUSD = async () => {
+  try {
+    const conversionRef = db.collection("GlobalBank").doc("Conversion");
+    const bankRef = db.collection("GlobalBank").doc("Bank");
+
+    return await db.runTransaction(async (transaction) => {
+      const conversionDoc = await transaction.get(conversionRef);
+      const bankDoc = await transaction.get(bankRef);
+
+      const PHP = conversionDoc.data()?.PHP || 0;
+      const currentUSD = bankDoc.data()?.USD || 0;
+
+      if (PHP >= 50) {
+        const usdToAdd = Math.floor(PHP / 50);
+        const remainingPHP = PHP % 50;
+
+        transaction.update(conversionRef, { PHP: remainingPHP });
+        transaction.update(bankRef, { USD: currentUSD + usdToAdd });
+
+        conversionLogger.info(
+          `Converted ${usdToAdd * 50} PHP to ${usdToAdd} USD`,
+          { remainingPHP, newUSD: currentUSD + usdToAdd }
+        );
+        return { convertedAmount: usdToAdd, remainingPHP };
+      }
+
+      conversionLogger.info(
+        `PHP amount (${PHP}) is less than 50, no conversion needed`
+      );
+      return { convertedAmount: 0, remainingPHP: PHP };
+    });
+  } catch (error) {
+    conversionLogger.error("Error during conversion", { error });
+    throw error;
+  }
+};
+
+const conversionInterval = setInterval(() => {
+  convertPHPToUSD()
+    .then((result) => {
+      conversionLogger.debug("Scheduled conversion completed", { result });
+    })
+    .catch((error) => {
+      conversionLogger.error("Scheduled conversion failed", { error });
+    });
+}, 10000);
+
+const stopConversionInterval = () => {
+  clearInterval(conversionInterval);
+  conversionLogger.info("Stopped the automatic PHP to USD conversion");
+};
+
+export { convertPHPToUSD, stopConversionInterval };

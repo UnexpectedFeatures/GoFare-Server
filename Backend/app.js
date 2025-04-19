@@ -10,6 +10,7 @@ import { sendTransactionNotification } from "./Services/firebaseNotification.js"
 import { syncBalances } from "./Controllers/Stripe/stripeSyncInserter.js";
 import runSimulation from "./Services/trainRunner.js";
 import paypalRoutes from "./Routes/paypalRoutes.js";
+import { convertPHPToUSD } from "./Services/conversion,js";
 
 dotenv.config();
 const app = express();
@@ -35,6 +36,7 @@ async function initializeApp() {
     startSocket3();
 
     await runSimulation();
+    await convertPHPToUSD();
   } catch (error) {
     console.error("Error initializing the application:", error);
     process.exit(1);

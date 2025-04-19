@@ -30,3 +30,4 @@ function createLogger(fileName) {
 export const trainLogger = createLogger("train-simulator");
 export const scanningLogger = createLogger("scanning");
 export const stripeLogger = createLogger("stripe");
+export const conversionLogger = createLogger("conversion");
