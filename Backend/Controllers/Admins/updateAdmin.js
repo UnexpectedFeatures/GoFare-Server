@@ -1,15 +1,12 @@
+import admin from "firebase-admin";
+
 export async function handleUpdateAdmin(ws, message) {
   try {
     const cleanedMessage = message.replace("[Update_Admin] ", "");
     const parsed = JSON.parse(cleanedMessage);
 
-    const userId = parsed.id;
-    const updatedData = {
-      firstName: parsed.firstName,
-      lastName: parsed.lastName,
-      middleName: parsed.middleName,
-      email: parsed.email
-    };
+    const userId = parsed.userId;
+    const updatedData = parsed.updatedData;
 
     if (!userId) {
       ws.send("[Update_Admin_Response] Error: Admin ID is required");
@@ -26,16 +23,23 @@ export async function handleUpdateAdmin(ws, message) {
     }
 
     const authUserData = {
-      ...(parsed.email && { email: parsed.email }),
-      ...(parsed.firstName && { displayName: parsed.firstName }),
-      ...(parsed.password && { password: parsed.password })
+      ...(updatedData.email && { email: updatedData.email }),
+      ...(updatedData.firstName && { displayName: updatedData.firstName }),
+      ...(updatedData.password && { password: updatedData.password }),
     };
 
-    if (Object.keys(authUserData).length > 0) {
-      try {
+    try {
+      const existingUser = await admin.auth().getUser(userId);
+      console.log(`Auth: User ${userId} exists`);
+
+      if (Object.keys(authUserData).length > 0) {
         await admin.auth().updateUser(userId, authUserData);
         console.log(`Auth: Updated user ${userId}`);
-      } catch (authError) {
+      }
+    } catch (authError) {
+      if (authError.code === 'auth/user-not-found') {
+        console.log(`Auth: User ${userId} not found in Firebase Auth`);
+      } else {
         console.error("Auth Error:", authError.message);
         ws.send(`[Update_Admin_Response] Error: ${authError.message}`);
         return;
