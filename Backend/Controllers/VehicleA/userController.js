@@ -54,23 +54,44 @@ export async function findUserByRfidOrNfc(rfidOrNfc) {
     const userRfidDoc = await db.collection("UserRFID").doc(userId).get();
     const userData = userRfidDoc.data();
 
-    if (userData.active === false) {
-      scanningLogger.warn(`Card is deactivated for user ID: ${userId}`);
+    const isRfidScan = userData.rfid === rfidOrNfc;
+    const isNfcScan = userData.nfc === rfidOrNfc;
+    const searchType = isRfidScan ? "RFID" : "NFC";
+
+    if (isRfidScan && userData.rfidActive === false) {
+      scanningLogger.warn(`RFID is deactivated for user ID: ${userId}`);
       const errorMessage = {
         type: "SCAN_RESULT",
         status: "card_deactivated",
-        message: "Your card has been deactivated",
+        message: "Your RFID card has been deactivated",
         userId: userId,
         rfid: rfidOrNfc,
+        scanType: searchType,
       };
       broadcastToAll(null, JSON.stringify(errorMessage), allClients);
       return {
-        error: "Your card has been deactivated",
+        error: "Your RFID card has been deactivated",
         status: "card_deactivated",
       };
     }
 
-    const searchType = userData.rfid === rfidOrNfc ? "RFID" : "NFC";
+    if (isNfcScan && userData.nfcActive === false) {
+      scanningLogger.warn(`NFC is deactivated for user ID: ${userId}`);
+      const errorMessage = {
+        type: "SCAN_RESULT",
+        status: "card_deactivated",
+        message: "Your NFC card has been deactivated",
+        userId: userId,
+        rfid: rfidOrNfc,
+        scanType: searchType,
+      };
+      broadcastToAll(null, JSON.stringify(errorMessage), allClients);
+      return {
+        error: "Your NFC card has been deactivated",
+        status: "card_deactivated",
+      };
+    }
+
     scanningLogger.info(`Found ${searchType} document with ID: ${userId}`);
 
     let linkedUserData = null;
@@ -98,6 +119,7 @@ export async function findUserByRfidOrNfc(rfidOrNfc) {
           message: "You have an active loan and cannot proceed",
           userId: userId,
           rfid: rfidOrNfc,
+          scanType: searchType,
         };
         broadcastToAll(null, JSON.stringify(errorMessage), allClients);
         return {
@@ -117,6 +139,7 @@ export async function findUserByRfidOrNfc(rfidOrNfc) {
       status: "success",
       userId: userId,
       rfid: rfidOrNfc,
+      scanType: searchType,
       assignmentStatus: result.status,
       userData: {
         ...userData,
@@ -148,7 +171,7 @@ export async function findUserByRfidOrNfc(rfidOrNfc) {
       JSON.stringify({
         type: "SCAN_RESULT",
         status: "error",
-        message: "Error processing RFID scan",
+        message: "Error processing RFID/NFC scan",
         error: error.message,
       }),
       allClients

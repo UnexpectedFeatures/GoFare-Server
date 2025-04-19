@@ -13,6 +13,10 @@ import { handleUpdateUser } from "../Controllers/Users/updateUser.js";
 import { handleFetchRefundRequests } from "../Controllers/fetchRefundRequests.js";
 import { handleApproveRefund } from "../Controllers/approveRefund.js";
 import { handleRejectRefund } from "../Controllers/rejectRefund.js";
+import { handleDeactivateRFID } from "../Controllers/RFID-NFC/deactivateRFID.js";
+import { handleActivateRFID } from "../Controllers/RFID-NFC/activateRFID.js";
+import { handleDeactivateNFC } from "../Controllers/RFID-NFC/deactivateNFC.js";
+import { handleActivateNFC } from "../Controllers/RFID-NFC/activateNFC.js";
 
 dotenv.config();
 
@@ -77,6 +81,18 @@ function startSocket3() {
       } else if (msg.trim().startsWith("[RejectRefund]")) {
         console.log("Reject refund request received");
         handleRejectRefund(ws, msg);
+      } else if (msg.trim().startsWith("[Deactivate_RFID]")) {
+        console.log("Deactivate RFID request received");
+        handleDeactivateRFID(ws, msg);
+      } else if (msg.trim().startsWith("[Activate_RFID]")) {
+        handleActivateRFID(ws, msg);
+        console.log("Activate RFID received");
+      } else if (msg.trim().startsWith("[Deactivate_NFC]")) {
+        handleDeactivateNFC(ws, msg);
+        console.log("Deactivate NFC received");
+      } else if (msg.trim().startsWith("[Activate_NFC]")) {
+        handleActivateNFC(ws, msg);
+        console.log("Activate NFC received");
       } else {
         console.log("Unknown command received.");
         ws.send("[ERROR] Unknown command.");
