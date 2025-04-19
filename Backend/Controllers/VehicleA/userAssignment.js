@@ -1,21 +1,8 @@
 import db from "../../database.js";
 import { scanningLogger } from "../../Services/logger.js";
 import { allClients, broadcastToAll } from "../../Websockets/serverSocket1.js";
-
-function getFormattedGMT8() {
-  const options = {
-    timeZone: "Asia/Shanghai",
-    year: "numeric",
-    month: "numeric",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  };
-  return new Intl.DateTimeFormat("en-US", options)
-    .format(new Date())
-    .replace(",", "");
-}
+import transporter from "../../Services/mailSender.js";
+import getFormattedGMT8 from "../../Services/dateFormatter.js";
 
 async function getUserIdFromRfidOrNfc(rfidOrNfc) {
   const userQuery = await db
@@ -33,6 +20,113 @@ async function getUserIdFromRfidOrNfc(rfidOrNfc) {
           .limit(1)
           .get()
       ).docs[0]?.id || null;
+}
+
+async function sendDropoffReceipt(email, userName, assignmentData, vehicle) {
+  try {
+    const mailOptions = {
+      from: process.env.MAIL_USER,
+      to: email,
+      subject: `Your ${vehicle.toUpperCase()} Journey Receipt`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; border: 2px solid #0056b3; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+          <!-- Header with blue background -->
+          <div style="background-color: #0056b3; color: white; padding: 15px; text-align: center;">
+            <h1 style="margin: 0; font-size: 24px; letter-spacing: 1px;">${vehicle.toUpperCase()} JOURNEY RECEIPT</h1>
+          </div>
+          
+          <!-- Main content -->
+          <div style="padding: 20px;">
+            <!-- Passenger and Ticket Info -->
+            <div style="display: flex; justify-content: space-between; margin-bottom: 20px; border-bottom: 1px dashed #ccc; padding-bottom: 15px;">
+              <div>
+                <div style="color: black; font-size: 12px; margin-bottom: 3px;">PASSENGER</div>
+                <div style="font-weight: bold; font-size: 18px;">${userName.toUpperCase()}</div>
+              </div>
+              <div style="text-align: right; margin-left: 225px;">
+                <div style="color: black; font-size: 12px; margin-bottom: 3px;">TICKET TYPE</div>
+                <div style="font-weight: bold; font-size: 18px;">ONE WAY</div>
+              </div>
+            </div>
+            
+            <!-- Flight/Vehicle Info -->
+            <div style="background-color: #f5f9ff; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+              <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+                <div style="text-align: left;">
+                  <div style="color: black; font-size: 12px; margin-bottom: 3px;">DATE</div>
+                  <div style="font-weight: bold;">${assignmentData.pickupTime
+                    .split(" ")[0]
+                    .replace(/-/g, " ")}</div>
+                </div>
+              </div>
+              
+              <div style="display: flex; justify-content: space-between;">
+                <div>
+                  <div style="color: black; font-size: 12px; margin-bottom: 3px;">FROM</div>
+                  <div style="font-weight: bold;">${assignmentData.pickupStop.toUpperCase()}</div>
+                </div>
+                <div style="text-align: right; margin-left: 20px;">
+                  <div style="color: black; font-size: 12px; margin-bottom: 3px;">TO</div>
+                  <div style="font-weight: bold;">${assignmentData.dropoffStop.toUpperCase()}</div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Time and Seat Info -->
+            <div style="display: flex; justify-content: space-between; margin-bottom: 20px; gap: 15px;">
+              <div style="flex: 1;">
+                <div style="color: black; font-size: 12px; margin-bottom: 3px; margin-right: 30px;">BOARDING TIME</div>
+                <div style="font-weight: bold;">10:45 AM</div>
+              </div>
+              <div style="flex: 1; text-align: left;">
+                <div style="color: black; font-size: 12px; margin-bottom: 3px; margin-right: 30px;">SEAT</div>
+                <div style="font-weight: bold;">AA</div>
+              </div>
+              <div style="flex: 1; text-align: left;">
+                <div style="color: black; font-size: 12px; margin-bottom: 3px;">GATE</div>
+                <div style="font-weight: bold;">B1</div>
+              </div>
+            </div>
+            
+            <!-- Price and Barcode -->
+            <div style="border-top: 2px dashed #ccc; padding-top: 15px; text-align: center;">
+              <div style="margin-bottom: 10px;">
+                <div style="color: black; font-size: 12px;">FARE</div>
+                <div style="font-weight: bold; font-size: 20px; color: #0056b3;">£0.00</div>
+              </div>
+              <div style="background-color: #f0f0f0; padding: 10px; display: inline-block; margin-bottom: 15px;">
+                <div style="font-family: 'Courier New', monospace; letter-spacing: 3px; font-weight: bold;">93174040187371</div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Footer -->
+          <div style="background-color: #f5f5f5; padding: 15px; text-align: center; font-size: 12px; color: black; border-top: 1px solid #ddd;">
+            <div>Printed on ${new Date()
+              .toLocaleString("en-GB", {
+                hour: "2-digit",
+                minute: "2-digit",
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+              })
+              .toUpperCase()}</div>
+            <div style="margin-top: 10px; color: #0056b3; font-weight: bold;">Thank you for traveling with us</div>
+          </div>
+        </div>
+        
+        <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 20px auto 0; font-size: 12px; color: black; line-height: 1.5;">
+          <p>If you have any questions about your journey, please contact our customer service.</p>
+          <p>This is an automated email - please do not reply directly to this message.</p>
+        </div>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+    scanningLogger.info(`Receipt email sent to ${email}`);
+  } catch (error) {
+    scanningLogger.error(`Failed to send receipt email: ${error.message}`);
+  }
 }
 
 export async function assignPickupOrDropoff(rfidOrNfc) {
@@ -114,6 +208,19 @@ export async function assignPickupOrDropoff(rfidOrNfc) {
             updatedAt: timestamp,
           };
           action = `DROPOFF_${currentVehicle.toUpperCase()}`;
+
+          if (userData.email) {
+            await sendDropoffReceipt(
+              userData.email,
+              userName,
+              { ...activeTrip, ...assignmentData },
+              currentVehicle
+            );
+          } else {
+            scanningLogger.warn(
+              `No email found for user ${userId}, cannot send receipt`
+            );
+          }
         }
 
         await assignmentRef.update(assignmentData);
