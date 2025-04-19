@@ -41,31 +41,145 @@ async function generateTransactionId(userId) {
   return `TX-${nextNum.toString().padStart(4, "0")}`;
 }
 
-async function recordTransaction(userId, userName, assignmentData, vehicle) {
+async function calculateFare(pickupStop, dropoffStop) {
+  try {
+    const routeDoc = await db.collection("Route").doc("Route1").get();
+    if (!routeDoc.exists) {
+      scanningLogger.error("Route document not found");
+      return 0;
+    }
+
+    const routeData = routeDoc.data();
+    const stops = [
+      routeData.Stop1,
+      routeData.Stop2,
+      routeData.Stop3,
+      routeData.Stop4,
+      routeData.Stop5,
+      routeData.Stop6,
+    ].filter((stop) => stop);
+
+    const pickupIndex = stops.findIndex((stop) => stop === pickupStop);
+    const dropoffIndex = stops.findIndex((stop) => stop === dropoffStop);
+
+    if (pickupIndex === -1 || dropoffIndex === -1) {
+      scanningLogger.error(`Invalid stops: ${pickupStop} or ${dropoffStop}`);
+      return 0;
+    }
+
+    const stopsPassed = Math.abs(dropoffIndex - pickupIndex);
+    return 13 + stopsPassed * 10;
+  } catch (error) {
+    scanningLogger.error(`Failed to calculate fare: ${error.message}`);
+    return 0;
+  }
+}
+
+async function checkUserLoanStatus(userId) {
+  try {
+    const walletRef = db.collection("UserWallet").doc(userId);
+    const walletDoc = await walletRef.get();
+
+    if (!walletDoc.exists) {
+      await walletRef.set({ balance: 0, loanAmount: 0, loaned: false });
+      return { hasLoan: false, loanAmount: 0 };
+    }
+
+    const walletData = walletDoc.data();
+    return {
+      hasLoan: walletData.loaned && walletData.loanAmount > 0,
+      loanAmount: walletData.loanAmount || 0,
+    };
+  } catch (error) {
+    scanningLogger.error(`Failed to check loan status: ${error.message}`);
+    return { hasLoan: false, loanAmount: 0 };
+  }
+}
+
+async function processPayment(userId, amount) {
+  try {
+    const walletRef = db.collection("UserWallet").doc(userId);
+    const walletDoc = await walletRef.get();
+
+    if (!walletDoc.exists) {
+      await walletRef.set({ balance: 0, loanAmount: 0, loaned: false });
+    }
+
+    const walletData = walletDoc.exists
+      ? walletDoc.data()
+      : { balance: 0, loanAmount: 0, loaned: false };
+    const currentBalance = walletData.balance || 0;
+
+    if (currentBalance >= amount) {
+      await walletRef.update({
+        balance: currentBalance - amount,
+        lastUpdated: getFormattedGMT8(),
+      });
+      return {
+        success: true,
+        paymentStatus: "full",
+        amountPaid: amount,
+        loanAmount: 0,
+        remainingBalance: currentBalance - amount,
+      };
+    } else {
+      const loanAmount = amount - currentBalance;
+      await walletRef.update({
+        balance: 0,
+        loanAmount: (walletData.loanAmount || 0) + loanAmount,
+        loaned: true,
+        lastUpdated: getFormattedGMT8(),
+      });
+      return {
+        success: true,
+        paymentStatus: "partial",
+        amountPaid: currentBalance,
+        loanAmount,
+        remainingBalance: 0,
+      };
+    }
+  } catch (error) {
+    scanningLogger.error(`Payment processing failed: ${error.message}`);
+    return { success: false, error: error.message };
+  }
+}
+
+async function recordTransaction(
+  userId,
+  userName,
+  assignmentData,
+  vehicle,
+  paymentResult
+) {
   try {
     const transactionId = await generateTransactionId(userId);
     const transactionRef = db.collection("UserTransaction").doc(userId);
 
     const transactionData = {
-      currentBalance: 0,
+      currentBalance: paymentResult.remainingBalance,
       dateTime: getFormattedGMT8(),
       discount: false,
       dropoff: assignmentData.dropoffStop,
-      loaned: false,
-      loanedAmount: 0,
+      loaned: paymentResult.loanAmount > 0,
+      loanedAmount: paymentResult.loanAmount,
       pickup: assignmentData.pickupStop,
-      remainingBalance: 0,
-      totalAmount: 0,
+      remainingBalance: paymentResult.remainingBalance,
+      totalAmount: paymentResult.amountPaid + paymentResult.loanAmount,
       userName: userName,
       vehicle: vehicle,
       status: "completed",
+      paymentStatus: paymentResult.paymentStatus,
     };
 
     await transactionRef.update({
       [transactionId]: transactionData,
     });
 
-    return transactionId;
+    return {
+      transactionId,
+      totalAmount: transactionData.totalAmount,
+      paymentResult,
+    };
   } catch (error) {
     scanningLogger.error(`Failed to record transaction: ${error.message}`);
     return null;
@@ -77,23 +191,30 @@ async function sendDropoffReceipt(
   userName,
   assignmentData,
   vehicle,
-  transactionId
+  transactionId,
+  totalAmount,
+  paymentResult
 ) {
   try {
+    const formattedAmount = totalAmount.toFixed(2);
+    const paymentStatus =
+      paymentResult.paymentStatus === "full"
+        ? `FULLY PAID (£${formattedAmount})`
+        : `PARTIALLY PAID (£${paymentResult.amountPaid.toFixed(
+            2
+          )}) - LOAN: £${paymentResult.loanAmount.toFixed(2)}`;
+
     const mailOptions = {
       from: process.env.MAIL_USER,
       to: email,
       subject: `Your ${vehicle.toUpperCase()} Journey Receipt`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; border: 2px solid #0056b3; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-          <!-- Header with blue background -->
           <div style="background-color: #0056b3; color: white; padding: 15px; text-align: center;">
             <h1 style="margin: 0; font-size: 24px; letter-spacing: 1px;">${vehicle.toUpperCase()} JOURNEY RECEIPT</h1>
           </div>
           
-          <!-- Main content -->
           <div style="padding: 20px;">
-            <!-- Passenger and Ticket Info -->
             <div style="display: flex; justify-content: space-between; margin-bottom: 20px; border-bottom: 1px dashed #ccc; padding-bottom: 15px;">
               <div>
                 <div style="color: black; font-size: 12px; margin-bottom: 3px;">PASSENGER</div>
@@ -105,7 +226,6 @@ async function sendDropoffReceipt(
               </div>
             </div>
             
-            <!-- Flight/Vehicle Info -->
             <div style="background-color: #f5f9ff; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
               <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
                 <div style="text-align: left;">
@@ -128,7 +248,6 @@ async function sendDropoffReceipt(
               </div>
             </div>
             
-            <!-- Time and Seat Info -->
             <div style="display: flex; justify-content: space-between; margin-bottom: 20px; gap: 15px;">
               <div style="flex: 1;">
                 <div style="color: black; font-size: 12px; margin-bottom: 3px; margin-right: 30px;">BOARDING TIME</div>
@@ -144,11 +263,17 @@ async function sendDropoffReceipt(
               </div>
             </div>
             
-            <!-- Price and Barcode -->
             <div style="border-top: 2px dashed #ccc; padding-top: 15px; text-align: center;">
               <div style="margin-bottom: 10px;">
                 <div style="color: black; font-size: 12px;">FARE</div>
-                <div style="font-weight: bold; font-size: 20px; color: #0056b3;">£0.00</div>
+                <div style="font-weight: bold; font-size: 20px; color: #0056b3;">£${formattedAmount}</div>
+                <div style="font-size: 12px; margin-top: 5px; color: ${
+                  paymentResult.paymentStatus === "partial"
+                    ? "#ff0000"
+                    : "#00aa00"
+                }">
+                  ${paymentStatus}
+                </div>
               </div>
               <div style="background-color: #f0f0f0; padding: 10px; display: inline-block; margin-bottom: 15px;">
                 <div style="font-family: 'Courier New', monospace; letter-spacing: 3px; font-weight: bold;">${transactionId.replace(
@@ -159,7 +284,6 @@ async function sendDropoffReceipt(
             </div>
           </div>
           
-          <!-- Footer -->
           <div style="background-color: #f5f5f5; padding: 15px; text-align: center; font-size: 12px; color: black; border-top: 1px solid #ddd;">
             <div>Printed on ${new Date()
               .toLocaleString("en-GB", {
@@ -208,6 +332,16 @@ export async function assignPickupOrDropoff(rfidOrNfc) {
     const userData = userDoc.data();
     const userName =
       userData.name || `${userData.firstName} ${userData.lastName}`;
+
+    const { hasLoan, loanAmount } = await checkUserLoanStatus(userId);
+    if (hasLoan) {
+      scanningLogger.warn(`User ${userId} has existing loan of £${loanAmount}`);
+      return {
+        status: "LOAN_OUTSTANDING",
+        message: "Please pay your existing loan first",
+        loanAmount,
+      };
+    }
 
     const currentTrainDoc = await db
       .collection("TrainSimulation")
@@ -268,19 +402,39 @@ export async function assignPickupOrDropoff(rfidOrNfc) {
         action = `DROPOFF_${currentVehicle.toUpperCase()}`;
 
         if (userData.email) {
-          const transactionId = await recordTransaction(
-            userId,
-            userName,
-            { ...activeTrip, ...assignmentData },
-            currentVehicle
+          const totalAmount = await calculateFare(
+            activeTrip.pickupStop,
+            stopName
           );
+
+          const paymentResult = await processPayment(userId, totalAmount);
+
+          if (!paymentResult.success) {
+            scanningLogger.error(`Payment failed for user ${userId}`);
+            return {
+              status: "PAYMENT_FAILED",
+              message: "Payment processing failed",
+              error: paymentResult.error,
+            };
+          }
+
+          const { transactionId, totalAmount: actualAmount } =
+            await recordTransaction(
+              userId,
+              userName,
+              { ...activeTrip, ...assignmentData },
+              currentVehicle,
+              paymentResult
+            );
 
           await sendDropoffReceipt(
             userData.email,
             userName,
             { ...activeTrip, ...assignmentData },
             currentVehicle,
-            transactionId
+            transactionId,
+            actualAmount,
+            paymentResult
           );
         }
       }
