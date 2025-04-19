@@ -25,7 +25,6 @@ export async function handleUpdateAdmin(ws, message) {
       return;
     }
 
-    // Update Firebase Auth
     const authUserData = {
       ...(parsed.email && { email: parsed.email }),
       ...(parsed.firstName && { displayName: parsed.firstName }),
@@ -43,7 +42,6 @@ export async function handleUpdateAdmin(ws, message) {
       }
     }
 
-    // Update Firestore
     try {
       await docRef.update(updatedData);
       console.log(`Firestore: Updated document for ${userId}`);

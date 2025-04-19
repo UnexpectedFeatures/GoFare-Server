@@ -22,7 +22,63 @@ async function getUserIdFromRfidOrNfc(rfidOrNfc) {
       ).docs[0]?.id || null;
 }
 
-async function sendDropoffReceipt(email, userName, assignmentData, vehicle) {
+async function generateTransactionId(userId) {
+  const transactionsRef = db.collection("UserTransaction").doc(userId);
+  const transactionsDoc = await transactionsRef.get();
+
+  if (!transactionsDoc.exists) {
+    await transactionsRef.set({});
+    return "TX-0001";
+  }
+
+  const transactionIds = Object.keys(transactionsDoc.data());
+  if (transactionIds.length === 0) {
+    return "TX-0001";
+  }
+
+  const lastId = transactionIds.sort().pop();
+  const nextNum = parseInt(lastId.split("-")[1]) + 1;
+  return `TX-${nextNum.toString().padStart(4, "0")}`;
+}
+
+async function recordTransaction(userId, userName, assignmentData, vehicle) {
+  try {
+    const transactionId = await generateTransactionId(userId);
+    const transactionRef = db.collection("UserTransaction").doc(userId);
+
+    const transactionData = {
+      currentBalance: 0,
+      dateTime: getFormattedGMT8(),
+      discount: false,
+      dropoff: assignmentData.dropoffStop,
+      loaned: false,
+      loanedAmount: 0,
+      pickup: assignmentData.pickupStop,
+      remainingBalance: 0,
+      totalAmount: 0,
+      userName: userName,
+      vehicle: vehicle,
+      status: "completed",
+    };
+
+    await transactionRef.update({
+      [transactionId]: transactionData,
+    });
+
+    return transactionId;
+  } catch (error) {
+    scanningLogger.error(`Failed to record transaction: ${error.message}`);
+    return null;
+  }
+}
+
+async function sendDropoffReceipt(
+  email,
+  userName,
+  assignmentData,
+  vehicle,
+  transactionId
+) {
   try {
     const mailOptions = {
       from: process.env.MAIL_USER,
@@ -44,8 +100,8 @@ async function sendDropoffReceipt(email, userName, assignmentData, vehicle) {
                 <div style="font-weight: bold; font-size: 18px;">${userName.toUpperCase()}</div>
               </div>
               <div style="text-align: right; margin-left: 225px;">
-                <div style="color: black; font-size: 12px; margin-bottom: 3px;">TICKET TYPE</div>
-                <div style="font-weight: bold; font-size: 18px;">ONE WAY</div>
+                <div style="color: black; font-size: 12px; margin-bottom: 3px;">TRANSACTION ID</div>
+                <div style="font-weight: bold; font-size: 18px;">${transactionId}</div>
               </div>
             </div>
             
@@ -95,7 +151,10 @@ async function sendDropoffReceipt(email, userName, assignmentData, vehicle) {
                 <div style="font-weight: bold; font-size: 20px; color: #0056b3;">£0.00</div>
               </div>
               <div style="background-color: #f0f0f0; padding: 10px; display: inline-block; margin-bottom: 15px;">
-                <div style="font-family: 'Courier New', monospace; letter-spacing: 3px; font-weight: bold;">93174040187371</div>
+                <div style="font-family: 'Courier New', monospace; letter-spacing: 3px; font-weight: bold;">${transactionId.replace(
+                  "TX-",
+                  ""
+                )}</div>
               </div>
             </div>
           </div>
@@ -189,74 +248,76 @@ export async function assignPickupOrDropoff(rfidOrNfc) {
 
       let action, assignmentData;
 
-      if (!activeTrip.dropoffStop) {
-        if (
-          activeTrip.status === "awaiting_dropoff" &&
-          activeTrip.pickupStop === stopName
-        ) {
-          assignmentData = {
-            status: "in_progress",
-            updatedAt: timestamp,
-          };
-          action = `PICKUP_${currentVehicle.toUpperCase()}_CONFIRMED`;
-        } else {
-          assignmentData = {
-            dropoffStop: stopName,
-            dropoffTime: timestamp,
-            status: "completed",
-            completedAt: timestamp,
-            updatedAt: timestamp,
-          };
-          action = `DROPOFF_${currentVehicle.toUpperCase()}`;
+      if (
+        activeTrip.status === "awaiting_dropoff" &&
+        activeTrip.pickupStop === stopName
+      ) {
+        assignmentData = {
+          status: "in_progress",
+          updatedAt: timestamp,
+        };
+        action = `PICKUP_${currentVehicle.toUpperCase()}_CONFIRMED`;
+      } else {
+        assignmentData = {
+          dropoffStop: stopName,
+          dropoffTime: timestamp,
+          status: "completed",
+          completedAt: timestamp,
+          updatedAt: timestamp,
+        };
+        action = `DROPOFF_${currentVehicle.toUpperCase()}`;
 
-          if (userData.email) {
-            await sendDropoffReceipt(
-              userData.email,
-              userName,
-              { ...activeTrip, ...assignmentData },
-              currentVehicle
-            );
-          } else {
-            scanningLogger.warn(
-              `No email found for user ${userId}, cannot send receipt`
-            );
-          }
-        }
-
-        await assignmentRef.update(assignmentData);
-        const updatedAssignment = { ...activeTrip, ...assignmentData };
-
-        const wsMessage = {
-          type: "TRIP_UPDATE",
-          data: {
-            rfidOrNfc,
+        if (userData.email) {
+          const transactionId = await recordTransaction(
             userId,
             userName,
-            action,
-            timestamp,
-            stopName,
-            status: updatedAssignment.status,
-            pickupStop: updatedAssignment.pickupStop,
-            pickupTime: updatedAssignment.pickupTime,
-            dropoffStop: updatedAssignment.dropoffStop,
-            dropoffTime: updatedAssignment.dropoffTime,
-            assignmentId: assignmentRef.id,
-            vehicle: currentVehicle,
-          },
-        };
+            { ...activeTrip, ...assignmentData },
+            currentVehicle
+          );
 
-        broadcastToAll(null, JSON.stringify(wsMessage), allClients);
+          await sendDropoffReceipt(
+            userData.email,
+            userName,
+            { ...activeTrip, ...assignmentData },
+            currentVehicle,
+            transactionId
+          );
+        }
+      }
 
-        return {
-          status: "ASSIGNED",
+      await assignmentRef.update(assignmentData);
+      const updatedAssignment = { ...activeTrip, ...assignmentData };
+
+      const wsMessage = {
+        type: "TRIP_UPDATE",
+        data: {
+          rfidOrNfc,
+          userId,
+          userName,
           action,
           timestamp,
-          assignmentData: updatedAssignment,
+          stopName,
+          status: updatedAssignment.status,
+          pickupStop: updatedAssignment.pickupStop,
+          pickupTime: updatedAssignment.pickupTime,
+          dropoffStop: updatedAssignment.dropoffStop,
+          dropoffTime: updatedAssignment.dropoffTime,
           assignmentId: assignmentRef.id,
-          user: { ...userData, documentId: userId },
           vehicle: currentVehicle,
-        };
-      }
+        },
+      };
+
+      broadcastToAll(null, JSON.stringify(wsMessage), allClients);
+
+      return {
+        status: "ASSIGNED",
+        action,
+        timestamp,
+        assignmentData: updatedAssignment,
+        assignmentId: assignmentRef.id,
+        user: { ...userData, documentId: userId },
+        vehicle: currentVehicle,
+      };
     }
 
     if (currentVehicle === "b") {

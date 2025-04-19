@@ -9,11 +9,10 @@ export const handleFetchAdmins = async (ws, message) => {
 
     AdminsSnapshot.forEach((doc) => {
       const adminData = {
-        id: doc.id, // this is the document ID
+        id: doc.id, 
         ...doc.data(),
       };
 
-      // Log each admin's documentId and other fields
       console.log("Admin data:", adminData);
 
       Admins.push(adminData);
