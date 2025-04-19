@@ -10,13 +10,16 @@ import { handleUpdateAdmin } from "../Controllers/Admins/updateAdmin.js";
 import { handleInsertUser } from "../Controllers/Users/insertUsers.js";
 import { handleDeleteUser } from "../Controllers/Users/deleteUser.js";
 import { handleUpdateUser } from "../Controllers/Users/updateUser.js";
-import { handleFetchRefundRequests } from "../Controllers/fetchRefundRequests.js";
-import { handleApproveRefund } from "../Controllers/approveRefund.js";
-import { handleRejectRefund } from "../Controllers/rejectRefund.js";
+import { handleFetchRefundRequests } from "../Controllers/Refund/fetchRefundRequests.js";
+import { handleApproveRefund } from "../Controllers/Refund/approveRefund.js";
+import { handleRejectRefund } from "../Controllers/Refund/rejectRefund.js";
 import { handleDeactivateRFID } from "../Controllers/RFID-NFC/deactivateRFID.js";
 import { handleActivateRFID } from "../Controllers/RFID-NFC/activateRFID.js";
 import { handleDeactivateNFC } from "../Controllers/RFID-NFC/deactivateNFC.js";
 import { handleActivateNFC } from "../Controllers/RFID-NFC/activateNFC.js";
+import { handleRefundRequests } from "../Controllers/Refund/requestRefund.js";
+import { handleFetchRejectedRefunds } from "../Controllers/Refund/fetchRefundRejected.js";
+import { handleFetchApprovedRefunds } from "../Controllers/Refund/fetchRefundApproved.js";
 
 dotenv.config();
 
@@ -72,15 +75,24 @@ function startSocket3() {
       } else if (msg.trim().startsWith("[Update_User]")) {
         console.log("Update admin request received");
         handleUpdateUser(ws, msg);
-      } else if (msg.trim().startsWith("[FetchRefunds]")) {
-        console.log("Fetching refunds request received");
+      } else if (msg.trim().startsWith("[Fetch_Refunds_Unapproved]")) {
+        console.log("Fetching refunds unapproved request received");
         handleFetchRefundRequests(ws, msg);
-      } else if (msg.trim().startsWith("[ApproveRefund]")) {
+      } else if (msg.trim().startsWith("[Fetch_Refunds_Approved]")) {
+        console.log("Fetching refunds approved request received");
+        handleFetchApprovedRefunds(ws, msg);
+      } else if (msg.trim().startsWith("[Fetch_Refunds_Rejected]")) {
+        console.log("Fetching refunds rejected request received");
+        handleFetchRejectedRefunds(ws, msg);
+      } else if (msg.trim().startsWith("[Approve_Refund]")) {
         console.log("Approve refund request received");
         handleApproveRefund(ws, msg);
-      } else if (msg.trim().startsWith("[RejectRefund]")) {
+      } else if (msg.trim().startsWith("[Reject_Refund]")) {
         console.log("Reject refund request received");
         handleRejectRefund(ws, msg);
+      } else if (msg.trim().startsWith("[Request_Refund]")) {
+        console.log("Request refund request received");
+        handleRefundRequests(ws, msg);
       } else if (msg.trim().startsWith("[Deactivate_RFID]")) {
         console.log("Deactivate RFID request received");
         handleDeactivateRFID(ws, msg);
