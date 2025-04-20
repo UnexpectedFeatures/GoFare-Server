@@ -3,9 +3,7 @@ import admin from "firebase-admin";
 export async function handleActivateNFC(ws, message) {
   try {
     const cleanedMessage = message.replace("[Activate_NFC] ", "");
-    const parsed = JSON.parse(cleanedMessage);
-
-    const userId = parsed.userId;
+    const userId = JSON.parse(cleanedMessage);
 
     if (!userId) {
       ws.send("[Activate_NFC_Response] Error: User ID is required");

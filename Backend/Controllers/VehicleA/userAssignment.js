@@ -76,8 +76,16 @@ async function generateTransactionId(userId) {
   return `TX-${nextNum.toString().padStart(4, "0")}`;
 }
 
-async function calculateFare(pickupStop, dropoffStop) {
+async function calculateFare(pickupStop, dropoffStop, userId) {
   try {
+    let hasDiscount = false;
+    if (userId) {
+      const walletDoc = await db.collection("UserWallet").doc(userId).get();
+      if (walletDoc.exists) {
+        hasDiscount = walletDoc.data().discount || false;
+      }
+    }
+
     const routeDoc = await db.collection("Route").doc("Route1").get();
     if (!routeDoc.exists) {
       scanningLogger.error("Route document not found");
@@ -103,10 +111,19 @@ async function calculateFare(pickupStop, dropoffStop) {
     }
 
     const stopsPassed = Math.abs(dropoffIndex - pickupIndex);
-    return 13 + stopsPassed * 10;
+    let fare = 13 + stopsPassed * 10;
+
+    if (hasDiscount) {
+      const originalFare = fare;
+      fare = fare * 0.9;
+      scanningLogger.info(`Applied 10% discount for user ${userId}`);
+      return { fare, originalFare, discountApplied: true };
+    }
+
+    return { fare, originalFare: fare, discountApplied: false };
   } catch (error) {
     scanningLogger.error(`Failed to calculate fare: ${error.message}`);
-    return 0;
+    return { fare: 0, originalFare: 0, discountApplied: false };
   }
 }
 
@@ -184,7 +201,8 @@ async function recordTransaction(
   userName,
   assignmentData,
   vehicle,
-  paymentResult
+  paymentResult,
+  originalFare
 ) {
   try {
     const transactionId = await generateTransactionId(userId);
@@ -194,16 +212,20 @@ async function recordTransaction(
 
     await updateGlobalBankConversion(totalAmount);
 
+    const walletDoc = await db.collection("UserWallet").doc(userId).get();
+    const hasDiscount = walletDoc.exists ? walletDoc.data().discount : false;
+
     const transactionData = {
       currentBalance: paymentResult.remainingBalance,
       dateTime: getFormattedGMT8(),
-      discount: false,
+      discount: hasDiscount,
       dropoff: assignmentData.dropoffStop,
       loaned: paymentResult.loanedAmount > 0,
       loanedAmount: paymentResult.loanedAmount,
       pickup: assignmentData.pickupStop,
       remainingBalance: paymentResult.remainingBalance,
       totalAmount: totalAmount,
+      originalFare: originalFare,
       userName: userName,
       vehicle: vehicle,
       status: "completed",
@@ -217,6 +239,7 @@ async function recordTransaction(
     return {
       transactionId,
       totalAmount,
+      originalFare,
       paymentResult,
     };
   } catch (error) {
@@ -232,16 +255,39 @@ async function sendDropoffReceipt(
   vehicle,
   transactionId,
   totalAmount,
-  paymentResult
+  paymentResult,
+  originalFare
 ) {
   try {
+    const discountApplied = originalFare !== totalAmount;
+    const discountAmount = originalFare - totalAmount;
+
     const formattedAmount = totalAmount.toFixed(2);
+    const formattedOriginalAmount = originalFare.toFixed(2);
+    const formattedDiscountAmount = discountAmount.toFixed(2);
+
     const paymentStatus =
       paymentResult.paymentStatus === "full"
         ? `FULLY PAID (£${formattedAmount})`
         : `PARTIALLY PAID (£${paymentResult.amountPaid.toFixed(
             2
           )}) - LOAN: £${paymentResult.loanedAmount.toFixed(2)}`;
+
+    const dropoffDateTime = new Date(assignmentData.dropoffTime);
+    const formattedDate = dropoffDateTime
+      .toLocaleDateString("en-GB", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      })
+      .toUpperCase();
+    const formattedTime = dropoffDateTime
+      .toLocaleTimeString("en-GB", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      })
+      .toUpperCase();
 
     const mailOptions = {
       from: process.env.MAIL_USER,
@@ -269,9 +315,7 @@ async function sendDropoffReceipt(
               <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
                 <div style="text-align: left;">
                   <div style="color: black; font-size: 12px; margin-bottom: 3px;">DATE</div>
-                  <div style="font-weight: bold;">${assignmentData.pickupTime
-                    .split(" ")[0]
-                    .replace(/-/g, " ")}</div>
+                  <div style="font-weight: bold;">${formattedDate}</div>
                 </div>
               </div>
               
@@ -280,7 +324,7 @@ async function sendDropoffReceipt(
                   <div style="color: black; font-size: 12px; margin-bottom: 3px;">FROM</div>
                   <div style="font-weight: bold;">${assignmentData.pickupStop.toUpperCase()}</div>
                 </div>
-                <div style="text-align: right; margin-left: 20px;">
+                <div style="text-align: left; margin-left: 20px;">
                   <div style="color: black; font-size: 12px; margin-bottom: 3px;">TO</div>
                   <div style="font-weight: bold;">${assignmentData.dropoffStop.toUpperCase()}</div>
                 </div>
@@ -289,8 +333,8 @@ async function sendDropoffReceipt(
             
             <div style="display: flex; justify-content: space-between; margin-bottom: 20px; gap: 15px;">
               <div style="flex: 1;">
-                <div style="color: black; font-size: 12px; margin-bottom: 3px; margin-right: 30px;">BOARDING TIME</div>
-                <div style="font-weight: bold;">10:45 AM</div>
+                <div style="color: black; font-size: 12px; margin-bottom: 3px; margin-right: 30px;">DROPOFF TIME</div>
+                <div style="font-weight: bold;">${formattedTime}</div>
               </div>
               <div style="flex: 1; text-align: left;">
                 <div style="color: black; font-size: 12px; margin-bottom: 3px; margin-right: 30px;">SEAT</div>
@@ -303,6 +347,21 @@ async function sendDropoffReceipt(
             </div>
             
             <div style="border-top: 2px dashed #ccc; padding-top: 15px; text-align: center;">
+              ${
+                discountApplied
+                  ? `
+                <div style="margin-bottom: 10px;">
+                  <div style="color: black; font-size: 12px;">ORIGINAL FARE</div>
+                  <div style="font-weight: bold; font-size: 18px; text-decoration: line-through; color: #777;">£${formattedOriginalAmount}</div>
+                </div>
+                <div style="margin-bottom: 10px;">
+                  <div style="color: black; font-size: 12px;">DISCOUNT (10%)</div>
+                  <div style="font-weight: bold; font-size: 18px; color: #00aa00;">-£${formattedDiscountAmount}</div>
+                </div>
+              `
+                  : ""
+              }
+              
               <div style="margin-bottom: 10px;">
                 <div style="color: black; font-size: 12px;">FARE</div>
                 <div style="font-weight: bold; font-size: 20px; color: #0056b3;">£${formattedAmount}</div>
@@ -443,9 +502,10 @@ export async function assignPickupOrDropoff(rfidOrNfc) {
         action = `DROPOFF_${currentVehicle.toUpperCase()}`;
 
         if (userData.email) {
-          const totalAmount = await calculateFare(
+          const { fare: totalAmount, originalFare } = await calculateFare(
             activeTrip.pickupStop,
-            stopName
+            stopName,
+            userId
           );
 
           const paymentResult = await processPayment(userId, totalAmount);
@@ -459,14 +519,18 @@ export async function assignPickupOrDropoff(rfidOrNfc) {
             };
           }
 
-          const { transactionId, totalAmount: actualAmount } =
-            await recordTransaction(
-              userId,
-              userName,
-              { ...activeTrip, ...assignmentData },
-              currentVehicle,
-              paymentResult
-            );
+          const {
+            transactionId,
+            totalAmount: actualAmount,
+            originalFare: actualOriginalFare,
+          } = await recordTransaction(
+            userId,
+            userName,
+            { ...activeTrip, ...assignmentData },
+            currentVehicle,
+            paymentResult,
+            originalFare
+          );
 
           await sendDropoffReceipt(
             userData.email,
@@ -475,7 +539,8 @@ export async function assignPickupOrDropoff(rfidOrNfc) {
             currentVehicle,
             transactionId,
             actualAmount,
-            paymentResult
+            paymentResult,
+            actualOriginalFare
           );
         }
       }

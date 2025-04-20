@@ -3,9 +3,7 @@ import admin from "firebase-admin";
 export async function handleDeactivateRFID(ws, message) {
   try {
     const cleanedMessage = message.replace("[Deactivate_RFID] ", "");
-    const parsed = JSON.parse(cleanedMessage);
-
-    const userId = parsed.userId;
+    const userId = JSON.parse(cleanedMessage);
 
     if (!userId) {
       ws.send("[Deactivate_RFID_Response] Error: User ID is required");

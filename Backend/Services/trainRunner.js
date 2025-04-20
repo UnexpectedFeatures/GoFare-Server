@@ -5,12 +5,12 @@ export default async function runSimulation() {
     console.log("🚂 Starting train simulation...");
     await trainSimulator.init("Route1");
 
-    trainSimulator.start(1000);
+    trainSimulator.start(5000);
 
     setTimeout(() => {
       trainSimulator.stop();
-      console.log("🛑 Simulation stopped after 2 minutes");
-    }, 120000);
+      console.log("🛑 Simulation stopped after 1 hour");
+    }, 3600000);
   } catch (error) {
     console.error("❌ Simulation error:", error);
     setTimeout(runSimulation, 5000);

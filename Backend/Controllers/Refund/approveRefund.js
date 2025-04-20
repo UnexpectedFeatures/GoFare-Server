@@ -13,6 +13,8 @@ export async function handleApproveRefund(ws, message) {
       throw new Error("Transaction ID must start with 'TX-'");
     }
 
+    console.log("transaction: ", transactionId);
+
     const UnapprovedRef = db
       .collection("Refunds")
       .doc(userId)
@@ -68,9 +70,9 @@ export async function handleApproveRefund(ws, message) {
         [`${transactionId}.status`]: "refund_approved",
       });
 
-      transaction.update(db.collection("Users").doc(userId), {
-        loanedAmount: updatedLoanedAmount,
-      });
+      // transaction.update(db.collection("Users").doc(userId), {
+      //   loanedAmount: updatedLoanedAmount,
+      // });
 
       const currentBalance = walletDoc.exists
         ? walletDoc.data().balance || 0

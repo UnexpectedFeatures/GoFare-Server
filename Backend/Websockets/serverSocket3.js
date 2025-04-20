@@ -39,6 +39,23 @@ import { handleActivateNFC } from "../Controllers/RFID-NFC/activateNFC.js";
 import { handleRefundRequests } from "../Controllers/Refund/requestRefund.js";
 import { handleFetchRejectedRefunds } from "../Controllers/Refund/fetchRefundRejected.js";
 import { handleFetchApprovedRefunds } from "../Controllers/Refund/fetchRefundApproved.js";
+import { handleToggleUserStatus } from "../Controllers/Users/changeStatusUser.js";
+import { handleProvideRFID } from "../Controllers/RFID-NFC/provideRFID.js";
+import { handleProvideNFC } from "../Controllers/RFID-NFC/provideNFC.js";
+import { handleFetchArchivedUsers } from "../Controllers/Users/fetchedArchivedUsers.js";
+import { handleDeleteArchivedUser } from "../Controllers/Users/deleteArchive.js";
+import { handleFetchRequests } from "../Controllers/Requests/fetchEverythingRequest.js";
+import { handleFetchSpecificRequest } from "../Controllers/Requests/fetchSpecificRequest.js";
+import { handleFetchUserRequests } from "../Controllers/Requests/fetchUserRequests.js";
+import { handleResolveRequest } from "../Controllers/Requests/resolveRequest.js";
+import { handlePostponeRequest } from "../Controllers/Requests/postponeRequest.js";
+import { fetchGrossYesterday } from "../Controllers/Stripe/grossVolumeYesterday.js";
+import { fetchGrossToday } from "../Controllers/Stripe/grossVolumeToday.js";
+import { handleInsertDriver } from "../Controllers/Drivers/insertDriver.js";
+import { handleUpdateDriver } from "../Controllers/Drivers/updateDriver.js";
+import { handleFetchDrivers } from "../Controllers/Drivers/fetchDriver.js";
+import { handleDeleteDriver } from "../Controllers/Drivers/deleteDriver.js";
+import { depositToUser } from "../Services/stripe.js";
 
 dotenv.config();
 
@@ -62,6 +79,7 @@ function startSocket3() {
         console.log("Connection is open");
       }
       const msg = message.toString();
+      const data = JSON.parse(msg);
       console.log("RAW MESSAGE:", JSON.stringify(msg));
 
       if (msg.trim().startsWith("[Fetch_Users]")) {
@@ -166,7 +184,59 @@ function startSocket3() {
       } else if (msg.trim().startsWith("[Activate_NFC]")) {
         handleActivateNFC(ws, msg);
         console.log("Activate NFC received");
-      } else {
+      } else if (msg.trim().startsWith("[Fetch_Archived_Users]")) {
+        handleFetchArchivedUsers(ws, msg);
+        console.log("Archive user request received");
+      } else if (msg.trim().startsWith("[Toggle_User_Status]")) {
+        handleToggleUserStatus(ws, msg);
+        console.log("Change user status request received");
+      } else if (msg.trim().startsWith("[Provide_RFID]")) {
+        handleProvideRFID(ws, msg);
+        console.log("Provide RFID request received");
+      } else if (msg.trim().startsWith("[Provide_NFC]")) {
+        handleProvideNFC(ws, msg);
+        console.log("Provide NFC request received");
+      } else if (msg.trim().startsWith("[Del_Archive]")) {
+        handleDeleteArchivedUser(ws, msg);
+        console.log("Delete archived user request received");
+      } else if (msg.trim().startsWith("[Fetch_Requests]")) {
+        handleFetchRequests(ws, msg);
+        console.log("Fetch every request recieved");
+      } else if (msg.trim().startsWith("[Fetch_Specific_Requests]")) {
+        handleFetchSpecificRequest(ws, msg);
+        console.log("Fetch every request recieved");
+      } else if (msg.trim().startsWith("[Fetch_User_Requests]")) {
+        handleFetchUserRequests(ws, msg);
+        console.log("Fetch specific request recieved");
+      } else if (msg.trim().startsWith("[Resolve_Request]")) {
+        handleResolveRequest(ws, msg);
+        console.log("Resolve request recieved");
+      } else if (msg.trim().startsWith("[Postpone_Request]")) {
+        handlePostponeRequest(ws, msg);
+        console.log("Postpone request recieved");
+      } else if (msg.trim().startsWith("[Gross_Today]")) {
+        fetchGrossToday(ws, msg);
+        console.log("Gross today request recieved");
+      } else if (msg.trim().startsWith("[Gross_Yesterday]")) {
+        fetchGrossYesterday(ws, msg);
+        console.log("Gross Yesterday request recieved");
+      } else if (msg.trim().startsWith("[Fetch_Drivers]")) {
+        console.log("Fetching drivers request received");
+        handleFetchDrivers(ws, msg);
+      } else if (msg.trim().startsWith("[Insert_Driver]")) {
+        console.log("Insert drivers request received");
+        handleInsertDriver(ws, msg);
+      } else if (msg.trim().startsWith("[Delete_Driver")) {
+        console.log("Delete drivers request received");
+        handleDeleteDriver(ws, msg);
+      } else if (msg.trim().startsWith("[Update_Driver]")) {
+        console.log("Update drivers request received");
+        handleUpdateDriver(ws, msg);
+      } else if (data.event === "createPayment") {
+        console.log("Striping Time");
+
+        depositToUser(ws, data)
+      }else {
         console.log("Unknown command received.");
         ws.send("[ERROR] Unknown command.");
       }

@@ -13,12 +13,11 @@ function generateUserId() {
 export async function handleInsertUser(ws, message) {
   try {
     const cleanedMessage = message.replace("[Insert_User] ", "");
-    const parsed = JSON.parse(cleanedMessage);
+    const userData = JSON.parse(cleanedMessage);
 
-    console.log("Parsed message:", parsed);
+    console.log("Parsed message:", userData);
 
     const userId = generateUserId();
-    const userData = parsed;
 
     console.log("User data:", userData);
 
@@ -27,7 +26,7 @@ export async function handleInsertUser(ws, message) {
       return;
     }
 
-    const timestamp = admin.firestore.Timestamp.now(); // This is the correct way to create a Timestamp
+    const timestamp = admin.firestore.Timestamp.now(); 
 
     const authUserData = {
       uid: userId,
@@ -38,10 +37,14 @@ export async function handleInsertUser(ws, message) {
       ...(userData.password && { password: userData.password }),
     };
 
+    console.log("Auth user data:", authUserData);
+    console.log("Birthdate:", userData.birthdate);
+    console.log("Birthday:", userData.birthday);
+
     const dbUserData = {
       address: userData.address || null,
       age: parseInt(userData.age) || null,
-      birthday: userData.birthday || null,
+      birthday: userData.birthdate || null,
       contactNumber: userData.contactNumber || null,
       email: userData.email,
       firstName: userData.firstName || null,
@@ -49,9 +52,10 @@ export async function handleInsertUser(ws, message) {
       lastName: userData.lastName || null,
       middleName: userData.middleName || null,
       enabled: true,
-      creationDate: timestamp, // Use Timestamp here
+      creationDate: timestamp,
       updateDate: timestamp,
     };
+
 
     const firestore = admin.firestore();
     const docRef = firestore.collection("Users").doc(userId);
