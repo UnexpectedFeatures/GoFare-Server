@@ -32,6 +32,10 @@ import { handleResolveRequest } from "../Controllers/Requests/resolveRequest.js"
 import { handlePostponeRequest } from "../Controllers/Requests/postponeRequest.js";
 import { fetchGrossYesterday } from "../Controllers/Stripe/grossVolumeYesterday.js";
 import { fetchGrossToday } from "../Controllers/Stripe/grossVolumeToday.js";
+import { handleInsertDriver } from "../Controllers/Drivers/insertDriver.js";
+import { handleUpdateDriver } from "../Controllers/Drivers/updateDriver.js";
+import { handleFetchDrivers } from "../Controllers/Drivers/fetchDriver.js";
+import { handleDeleteDriver } from "../Controllers/Drivers/deleteDriver.js";
 
 dotenv.config();
 
@@ -153,6 +157,18 @@ function startSocket3() {
       } else if (msg.trim().startsWith("[Gross_Yesterday]")) {
         fetchGrossYesterday(ws, msg);
         console.log("Gross Yesterday request recieved");
+      } else if (msg.trim().startsWith("[Fetch_Drivers]")) {
+        console.log("Fetching drivers request received");
+        handleFetchDrivers(ws, msg);
+      } else if (msg.trim().startsWith("[Insert_Driver]")) {
+        console.log("Insert drivers request received");
+        handleInsertDriver(ws, msg);
+      } else if (msg.trim().startsWith("[Delete_Driver")) {
+        console.log("Delete drivers request received");
+        handleDeleteDriver(ws, msg);
+      } else if (msg.trim().startsWith("[Update_Driver]")) {
+        console.log("Update drivers request received");
+        handleUpdateDriver(ws, msg);
       } else {
         console.log("Unknown command received.");
         ws.send("[ERROR] Unknown command.");
