@@ -1,8 +1,8 @@
 import WebSocket, { WebSocketServer } from "ws";
 import dotenv from "dotenv";
-import { handleFetchUsers } from "../Controllers/Users/fetchUsers.js";
 import { handleFetchTransactions } from "../Controllers/fetchTransactions.js";
-import { handleFetchAllUserData } from "../Controllers/Users/fetchEverything.js";
+
+import { handleFetchTargetAdmin } from "../Controllers/Admins/fetchTargetAdmin.js";
 import { handleFetchAdmins } from "../Controllers/Admins/fetchAdmins.js";
 import { handleFetchArchiveAdmins } from "../Controllers/Admins/fetchArchive.js";
 import { handleInsertAdmin } from "../Controllers/Admins/insertAdmins.js";
@@ -11,9 +11,24 @@ import { handleUpdateAdmin } from "../Controllers/Admins/updateAdmin.js";
 import { handleExpiredAdmin } from "../Controllers/Admins/deleteExpiredAdmin.js";
 import { handleSuspendAdmin } from "../Controllers/Admins/suspendAdmin.js";
 import { handleRetrieveAdmin } from "../Controllers/Admins/retrieveAdmin.js";
+
+import { handleFetchTargetDriver } from "../Controllers/Driver/fetchTargetDriver.js";
+import { handleFetchDrivers } from "../Controllers/Driver/fetchDrivers.js";
+import { handleFetchArchiveDrivers } from "../Controllers/Driver/fetchArchive.js";
+import { handleInsertDriver } from "../Controllers/Driver/insertDrivers.js";
+import { handleDeleteDriver } from "../Controllers/Driver/deleteDriver.js";
+import { handleUpdateDriver } from "../Controllers/Driver/updateDriver.js";
+import { handleExpiredDriver } from "../Controllers/Driver/deleteExpiredDriver.js";
+import { handleSuspendDriver } from "../Controllers/Driver/suspendDriver.js";
+import { handleRetrieveDriver } from "../Controllers/Driver/retrieveDriver.js";
+
+
+import { handleFetchUsers } from "../Controllers/Users/fetchUsers.js";
+import { handleFetchAllUserData } from "../Controllers/Users/fetchEverything.js";
 import { handleInsertUser } from "../Controllers/Users/insertUsers.js";
 import { handleDeleteUser } from "../Controllers/Users/deleteUser.js";
 import { handleUpdateUser } from "../Controllers/Users/updateUser.js";
+
 import { handleFetchRefundRequests } from "../Controllers/Refund/fetchRefundRequests.js";
 import { handleApproveRefund } from "../Controllers/Refund/approveRefund.js";
 import { handleRejectRefund } from "../Controllers/Refund/rejectRefund.js";
@@ -82,6 +97,36 @@ function startSocket3() {
       } else if (msg.trim().startsWith("[Retrieve_Admin]")) {
         console.log("Update admin request received");
         handleRetrieveAdmin(ws, msg);
+      } else if (msg.trim().startsWith("[Fetch_Target_Admin]")) {
+        console.log("Fetching admins request received");
+        handleFetchTargetAdmin(ws, msg);
+      } else if (msg.trim().startsWith("[Fetch_Target_Driver]")) {
+        console.log("Fetching admins request received");
+        handleFetchTargetDriver(ws, msg);
+      } else if (msg.trim().startsWith("[Fetch_Drivers]")) {
+        console.log("Fetching admins request received");
+        handleFetchDrivers(ws, msg);
+      } else if (msg.trim().startsWith("[Fetch_Drivers_Archive]")) {
+        console.log("Fetching admin's archive request received");
+        handleFetchArchiveDrivers(ws, msg);
+      } else if (msg.trim().startsWith("[Insert_Driver]")) {
+        console.log("Insert admin request received");
+        handleInsertDriver(ws, msg);
+      } else if (msg.trim().startsWith("[Suspend_Driver]")) {
+        console.log("Suspend admin request received");
+        handleSuspendDriver(ws, msg);
+      } else if (msg.trim().startsWith("[Delete_Driver]")) {
+        console.log("Delete admin request received");
+        handleDeleteDriver(ws, msg);
+      } else if (msg.trim().startsWith("[Delete_Expired_Drivers]")) {
+        console.log("Delete expired admin archive request received");
+        handleExpiredDriver(ws, msg);
+      } else if (msg.trim().startsWith("[Update_Driver]")) {
+        console.log("Update admin request received");
+        handleUpdateDriver(ws, msg);
+      } else if (msg.trim().startsWith("[Retrieve_Driver]")) {
+        console.log("Update admin request received");
+        handleRetrieveDriver(ws, msg);
       } else if (msg.trim().startsWith("[Insert_User]")) {
         console.log("Insert user request received");
         handleInsertUser(ws, msg);
