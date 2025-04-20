@@ -243,6 +243,22 @@ async function sendDropoffReceipt(
             2
           )}) - LOAN: £${paymentResult.loanedAmount.toFixed(2)}`;
 
+    const dropoffDateTime = new Date(assignmentData.dropoffTime);
+    const formattedDate = dropoffDateTime
+      .toLocaleDateString("en-GB", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      })
+      .toUpperCase();
+    const formattedTime = dropoffDateTime
+      .toLocaleTimeString("en-GB", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      })
+      .toUpperCase();
+
     const mailOptions = {
       from: process.env.MAIL_USER,
       to: email,
@@ -269,9 +285,7 @@ async function sendDropoffReceipt(
               <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
                 <div style="text-align: left;">
                   <div style="color: black; font-size: 12px; margin-bottom: 3px;">DATE</div>
-                  <div style="font-weight: bold;">${assignmentData.pickupTime
-                    .split(" ")[0]
-                    .replace(/-/g, " ")}</div>
+                  <div style="font-weight: bold;">${formattedDate}</div>
                 </div>
               </div>
               
@@ -280,7 +294,7 @@ async function sendDropoffReceipt(
                   <div style="color: black; font-size: 12px; margin-bottom: 3px;">FROM</div>
                   <div style="font-weight: bold;">${assignmentData.pickupStop.toUpperCase()}</div>
                 </div>
-                <div style="text-align: right; margin-left: 20px;">
+                <div style="text-align: left; margin-left: 20px;">
                   <div style="color: black; font-size: 12px; margin-bottom: 3px;">TO</div>
                   <div style="font-weight: bold;">${assignmentData.dropoffStop.toUpperCase()}</div>
                 </div>
@@ -289,8 +303,8 @@ async function sendDropoffReceipt(
             
             <div style="display: flex; justify-content: space-between; margin-bottom: 20px; gap: 15px;">
               <div style="flex: 1;">
-                <div style="color: black; font-size: 12px; margin-bottom: 3px; margin-right: 30px;">BOARDING TIME</div>
-                <div style="font-weight: bold;">10:45 AM</div>
+                <div style="color: black; font-size: 12px; margin-bottom: 3px; margin-right: 30px;">DROPOFF TIME</div>
+                <div style="font-weight: bold;">${formattedTime}</div>
               </div>
               <div style="flex: 1; text-align: left;">
                 <div style="color: black; font-size: 12px; margin-bottom: 3px; margin-right: 30px;">SEAT</div>
