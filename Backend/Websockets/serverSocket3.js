@@ -30,6 +30,8 @@ import { handleFetchSpecificRequest } from "../Controllers/Requests/fetchSpecifi
 import { handleFetchUserRequests } from "../Controllers/Requests/fetchUserRequests.js";
 import { handleResolveRequest } from "../Controllers/Requests/resolveRequest.js";
 import { handlePostponeRequest } from "../Controllers/Requests/postponeRequest.js";
+import { fetchGrossYesterday } from "../Controllers/Stripe/grossVolumeYesterday.js";
+import { fetchGrossToday } from "../Controllers/Stripe/grossVolumeToday.js";
 
 dotenv.config();
 
@@ -145,6 +147,12 @@ function startSocket3() {
       } else if (msg.trim().startsWith("[Postpone_Request]")) {
         handlePostponeRequest(ws, msg);
         console.log("Postpone request recieved");
+      } else if (msg.trim().startsWith("[Gross_Today]")) {
+        fetchGrossToday(ws, msg);
+        console.log("Gross today request recieved");
+      } else if (msg.trim().startsWith("[Gross_Yesterday]")) {
+        fetchGrossYesterday(ws, msg);
+        console.log("Gross Yesterday request recieved");
       } else {
         console.log("Unknown command received.");
         ws.send("[ERROR] Unknown command.");
