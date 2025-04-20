@@ -169,7 +169,10 @@ function startSocket3() {
       } else if (msg.trim().startsWith("[Update_Driver]")) {
         console.log("Update drivers request received");
         handleUpdateDriver(ws, msg);
-      } else {
+      } else if (data.event === "createPayment") {
+        console.log("Striping Time");
+        depositToUser(ws, data)
+      }else {
         console.log("Unknown command received.");
         ws.send("[ERROR] Unknown command.");
       }
