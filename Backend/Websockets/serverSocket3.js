@@ -4,9 +4,11 @@ import { handleFetchUsers } from "../Controllers/Users/fetchUsers.js";
 import { handleFetchTransactions } from "../Controllers/fetchTransactions.js";
 import { handleFetchAllUserData } from "../Controllers/Users/fetchEverything.js";
 import { handleFetchAdmins } from "../Controllers/Admins/fetchAdmins.js";
+import { handleFetchArchiveAdmins } from "../Controllers/Admins/fetchArchive.js";
 import { handleInsertAdmin } from "../Controllers/Admins/insertAdmins.js";
 import { handleDeleteAdmin } from "../Controllers/Admins/deleteAdmin.js";
 import { handleUpdateAdmin } from "../Controllers/Admins/updateAdmin.js";
+import { handleSuspendAdmin } from "../Controllers/Admins/suspendAdmin.js";
 import { handleInsertUser } from "../Controllers/Users/insertUsers.js";
 import { handleDeleteUser } from "../Controllers/Users/deleteUser.js";
 import { handleUpdateUser } from "../Controllers/Users/updateUser.js";
@@ -57,9 +59,15 @@ function startSocket3() {
       } else if (msg.trim().startsWith("[Fetch_Admins]")) {
         console.log("Fetching admins request received");
         handleFetchAdmins(ws, msg);
+      } else if (msg.trim().startsWith("[Fetch_Admins_Archive]")) {
+        console.log("Fetching admin's archive request received");
+        handleFetchArchiveAdmins(ws, msg);
       } else if (msg.trim().startsWith("[Insert_Admin]")) {
         console.log("Insert admin request received");
         handleInsertAdmin(ws, msg);
+      } else if (msg.trim().startsWith("[Suspend_Admin]")) {
+        console.log("Suspend admin request received");
+        handleSuspendAdmin(ws, msg);
       } else if (msg.trim().startsWith("[Delete_Admin]")) {
         console.log("Delete admin request received");
         handleDeleteAdmin(ws, msg);

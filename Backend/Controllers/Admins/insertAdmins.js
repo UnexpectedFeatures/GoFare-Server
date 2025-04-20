@@ -39,6 +39,7 @@ export async function handleInsertAdmin(ws, message) {
       middleName: userData.middleName || null,
       lastName: userData.lastName || null,
       password: userData.password || null,
+      enabled: true
     };
 
     const firestore = admin.firestore();

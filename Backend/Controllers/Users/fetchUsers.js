@@ -1,41 +1,46 @@
 import db from "../../database.js";
 
+
 export const handleFetchUsers = async (ws, message) => {
   try {
-    const usersSnapshot = await db.collection("Users").get();
-    const users = [];
+    console.log("Fetching Users from Firestore...");
 
-    const convertTimestamp = (field) => {
-      if (field && field.toDate) return field.toDate().toISOString();
-      return field;
-    };
+    const UsersSnapshot = await db.collection("Users").get();
+    const Users = [];
 
-    usersSnapshot.forEach((doc) => {
-      const d = doc.data();
-      users.push({
-        userId:       doc.id,
-        firstName:    d.firstName,
-        lastName:     d.lastName,
-        middleName:   d.middleName,
-        email:        d.email,
-        address:      d.address,
-        age:          d.age,
-        contactNumber:d.contactNumber,
-        gender:       d.gender,
-        enabled:      d.enabled,
-        creationDate: convertTimestamp(d.creationDate),
-        updateDate:   convertTimestamp(d.updateDate),
-        birthday:     d.birthday   
-      });
+    UsersSnapshot.forEach((doc) => {
+      const { creationDate, updateDate, ...rest } = doc.data();
+      const userData = {
+        id: doc.id,
+        ...rest
+      };
+
+      console.log("User data:", userData);
+      Users.push(userData);
     });
 
+    const response = {
+      type: "Users_DATA",
+      data: Users,
+      timestamp: new Date().toISOString(),
+    };
+
     if (ws.readyState === ws.OPEN) {
-      ws.send(JSON.stringify(users)); 
-      console.log(JSON.stringify(users)); 
-  }
-  } catch (e) {
+      ws.send(`[Users_Data] ${JSON.stringify(Users)}`);
+    } else {
+      console.error("WebSocket not open, cannot send Users data");
+    }
+  } catch (error) {
+    console.error("Error fetching Users:", error);
+
+    const errorResponse = {
+      type: "ERROR",
+      message: "Failed to fetch Users",
+      error: error.message,
+    };
+
     if (ws.readyState === ws.OPEN) {
-      ws.send(`[USERS_DATA] ${JSON.stringify([])}`); 
+      ws.send(JSON.stringify(errorResponse));
     }
   }
 };
