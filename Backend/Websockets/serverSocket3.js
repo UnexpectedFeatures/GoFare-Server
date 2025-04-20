@@ -36,6 +36,7 @@ import { handleInsertDriver } from "../Controllers/Drivers/insertDriver.js";
 import { handleUpdateDriver } from "../Controllers/Drivers/updateDriver.js";
 import { handleFetchDrivers } from "../Controllers/Drivers/fetchDriver.js";
 import { handleDeleteDriver } from "../Controllers/Drivers/deleteDriver.js";
+import { depositToUser } from "../Services/stripe.js";
 
 dotenv.config();
 
@@ -59,6 +60,7 @@ function startSocket3() {
         console.log("Connection is open");
       }
       const msg = message.toString();
+      const data = JSON.parse(msg);
       console.log("RAW MESSAGE:", JSON.stringify(msg));
 
       if (msg.trim().startsWith("[Fetch_Users]")) {
@@ -171,6 +173,7 @@ function startSocket3() {
         handleUpdateDriver(ws, msg);
       } else if (data.event === "createPayment") {
         console.log("Striping Time");
+
         depositToUser(ws, data)
       }else {
         console.log("Unknown command received.");

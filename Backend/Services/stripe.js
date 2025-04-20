@@ -24,3 +24,5 @@ export async function depositToUser(ws, data) {
 	ws.send("Error ", error)
   }
 }
+
+export default stripe;
