@@ -9,15 +9,21 @@ export async function handleFetchRejectedRefunds(ws, message) {
     const rejectedRefunds = await db.collectionGroup("Rejected").get();
 
     const results = rejectedRefunds.docs.map((doc) => {
+      const data = doc.data();
       const pathParts = doc.ref.path.split("/");
       const userId = pathParts[1];
-
+    
+      const formatTimestamp = (ts) => ts?.toDate().toISOString() ?? null;
+    
       return {
         userId,
         transactionId: doc.id,
-        ...doc.data(),
+        ...data,
+        requestedAt: formatTimestamp(data.requestedAt),
+        rejectedAt: formatTimestamp(data.rejectedAt),
       };
     });
+    
 
     const formattedResponse = {
       status: "success",

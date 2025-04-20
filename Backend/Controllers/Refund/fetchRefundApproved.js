@@ -9,13 +9,23 @@ export async function handleFetchApprovedRefunds(ws, message) {
     const approvedRefunds = await db.collectionGroup("Approved").get();
 
     const results = approvedRefunds.docs.map((doc) => {
-      const userId = doc.ref.path.split("/")[1]; 
+      const data = doc.data();
+    
+      const formatTimestamp = (ts) => {
+        return ts?.toDate().toISOString() ?? null;
+      };
+    
       return {
-        userId,
+        userId: doc.ref.path.split("/")[1],
         transactionId: doc.id,
-        ...doc.data(),
+        ...data,
+        requestedAt: formatTimestamp(data.requestedAt),
+        approvedAt: formatTimestamp(data.approvedAt),
       };
     });
+    
+
+    console.log("Approved Refunds: ", results);
 
     const formattedResponse = {
       status: "success",

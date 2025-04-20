@@ -13,6 +13,8 @@ export async function handleApproveRefund(ws, message) {
       throw new Error("Transaction ID must start with 'TX-'");
     }
 
+    console.log("transaction: ", transactionId);
+
     const UnapprovedRef = db
       .collection("Refunds")
       .doc(userId)
