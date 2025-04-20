@@ -20,6 +20,7 @@ import { handleActivateNFC } from "../Controllers/RFID-NFC/activateNFC.js";
 import { handleRefundRequests } from "../Controllers/Refund/requestRefund.js";
 import { handleFetchRejectedRefunds } from "../Controllers/Refund/fetchRefundRejected.js";
 import { handleFetchApprovedRefunds } from "../Controllers/Refund/fetchRefundApproved.js";
+import {handleToggleUserStatus} from "../Controllers/Users/changeStatusUser.js";
 
 dotenv.config();
 
@@ -105,7 +106,13 @@ function startSocket3() {
       } else if (msg.trim().startsWith("[Activate_NFC]")) {
         handleActivateNFC(ws, msg);
         console.log("Activate NFC received");
-      } else {
+      } else if (msg.trim().startsWith("[Archive_User]")) {
+    
+        console.log("Archive user request received");
+      }else if (msg.trim().startsWith("[Toggle_User_Status]")) {
+        handleToggleUserStatus(ws, msg);
+        console.log("Change user status request received");
+      }else {
         console.log("Unknown command received.");
         ws.send("[ERROR] Unknown command.");
       }

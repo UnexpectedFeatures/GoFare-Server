@@ -4,7 +4,7 @@ export async function handleDeleteUser(ws, message) {
   try {
     const cleanedMessage = message.replace("[Delete_User] ", "");
     const parsed = JSON.parse(cleanedMessage);
-
+    console.log("Parsed message:", parsed); 
     const userId = parsed.userId;
 
     if (!userId) {
