@@ -108,7 +108,7 @@ function startSocket3() {
       } else if (msg.trim().startsWith("[Activate_NFC]")) {
         handleActivateNFC(ws, msg);
         console.log("Activate NFC received");
-      } else if (msg.trim().startsWith("[Archive_User]")) {
+      } else if (msg.trim().startsWith("[Fetch_Archived_Users]")) {
         console.log("Archive user request received");
       } else if (msg.trim().startsWith("[Toggle_User_Status]")) {
         handleToggleUserStatus(ws, msg);
