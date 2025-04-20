@@ -28,6 +28,8 @@ import { handleDeleteArchivedUser } from "../Controllers/Users/deleteArchive.js"
 import { handleFetchRequests } from "../Controllers/Requests/fetchEverythingRequest.js";
 import { handleFetchSpecificRequest } from "../Controllers/Requests/fetchSpecificRequest.js";
 import { handleFetchUserRequests } from "../Controllers/Requests/fetchUserRequests.js";
+import { handleResolveRequest } from "../Controllers/Requests/resolveRequest.js";
+import { handlePostponeRequest } from "../Controllers/Requests/postponeRequest.js";
 
 dotenv.config();
 
@@ -137,6 +139,12 @@ function startSocket3() {
       } else if (msg.trim().startsWith("[Fetch_User_Requests]")) {
         handleFetchUserRequests(ws, msg);
         console.log("Fetch specific request recieved");
+      } else if (msg.trim().startsWith("[Resolve_Request]")) {
+        handleResolveRequest(ws, msg);
+        console.log("Resolve request recieved");
+      } else if (msg.trim().startsWith("[Postpone_Request]")) {
+        handlePostponeRequest(ws, msg);
+        console.log("Postpone request recieved");
       } else {
         console.log("Unknown command received.");
         ws.send("[ERROR] Unknown command.");
