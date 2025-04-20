@@ -25,6 +25,9 @@ import { handleProvideRFID } from "../Controllers/RFID-NFC/provideRFID.js";
 import { handleProvideNFC } from "../Controllers/RFID-NFC/provideNFC.js";
 import { handleFetchArchivedUsers } from "../Controllers/Users/fetchedArchivedUsers.js";
 import { handleDeleteArchivedUser } from "../Controllers/Users/deleteArchive.js";
+import { handleFetchRequests } from "../Controllers/Requests/fetchEverythingRequest.js";
+import { handleFetchSpecificRequest } from "../Controllers/Requests/fetchSpecificRequest.js";
+import { handleFetchUserRequests } from "../Controllers/Requests/fetchUserRequests.js";
 
 dotenv.config();
 
@@ -122,11 +125,19 @@ function startSocket3() {
       } else if (msg.trim().startsWith("[Provide_NFC]")) {
         handleProvideNFC(ws, msg);
         console.log("Provide NFC request received");
-      } else if(msg.trim().startsWith("[Del_Archive]")){
+      } else if (msg.trim().startsWith("[Del_Archive]")) {
         handleDeleteArchivedUser(ws, msg);
         console.log("Delete archived user request received");
-
-      }else {
+      } else if (msg.trim().startsWith("[Fetch_Requests]")) {
+        handleFetchRequests(ws, msg);
+        console.log("Fetch every request recieved");
+      } else if (msg.trim().startsWith("[Fetch_Specific_Requests]")) {
+        handleFetchSpecificRequest(ws, msg);
+        console.log("Fetch every request recieved");
+      } else if (msg.trim().startsWith("[Fetch_User_Requests]")) {
+        handleFetchUserRequests(ws, msg);
+        console.log("Fetch specific request recieved");
+      } else {
         console.log("Unknown command received.");
         ws.send("[ERROR] Unknown command.");
       }
