@@ -26,7 +26,7 @@ export async function handleInsertUser(ws, message) {
       return;
     }
 
-    const timestamp = admin.firestore.Timestamp.now(); // This is the correct way to create a Timestamp
+    const timestamp = admin.firestore.Timestamp.now(); 
 
     const authUserData = {
       uid: userId,

@@ -23,6 +23,8 @@ import { handleFetchApprovedRefunds } from "../Controllers/Refund/fetchRefundApp
 import { handleToggleUserStatus } from "../Controllers/Users/changeStatusUser.js";
 import { handleProvideRFID } from "../Controllers/RFID-NFC/provideRFID.js";
 import { handleProvideNFC } from "../Controllers/RFID-NFC/provideNFC.js";
+import { handleFetchArchivedUsers } from "../Controllers/Users/fetchedArchivedUsers.js";
+import { handleDeleteArchivedUser } from "../Controllers/Users/deleteArchive.js";
 
 dotenv.config();
 
@@ -109,6 +111,7 @@ function startSocket3() {
         handleActivateNFC(ws, msg);
         console.log("Activate NFC received");
       } else if (msg.trim().startsWith("[Fetch_Archived_Users]")) {
+        handleFetchArchivedUsers(ws, msg);
         console.log("Archive user request received");
       } else if (msg.trim().startsWith("[Toggle_User_Status]")) {
         handleToggleUserStatus(ws, msg);
@@ -119,7 +122,11 @@ function startSocket3() {
       } else if (msg.trim().startsWith("[Provide_NFC]")) {
         handleProvideNFC(ws, msg);
         console.log("Provide NFC request received");
-      } else {
+      } else if(msg.trim().startsWith("[Del_Archive]")){
+        handleDeleteArchivedUser(ws, msg);
+        console.log("Delete archived user request received");
+
+      }else {
         console.log("Unknown command received.");
         ws.send("[ERROR] Unknown command.");
       }
