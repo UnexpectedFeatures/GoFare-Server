@@ -5,7 +5,7 @@ export default async function runSimulation() {
     console.log("🚂 Starting train simulation...");
     await trainSimulator.init("Route1");
 
-    trainSimulator.start(1000);
+    trainSimulator.start(5000);
 
     setTimeout(() => {
       trainSimulator.stop();
