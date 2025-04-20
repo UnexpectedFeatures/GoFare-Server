@@ -31,3 +31,5 @@ export const trainLogger = createLogger("train-simulator");
 export const scanningLogger = createLogger("scanning");
 export const stripeLogger = createLogger("stripe");
 export const conversionLogger = createLogger("conversion");
+export const discountLogger = createLogger("discount");
+export const eventLogger = createLogger("event");

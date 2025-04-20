@@ -70,9 +70,9 @@ export async function handleApproveRefund(ws, message) {
         [`${transactionId}.status`]: "refund_approved",
       });
 
-      transaction.update(db.collection("Users").doc(userId), {
-        loanedAmount: updatedLoanedAmount,
-      });
+      // transaction.update(db.collection("Users").doc(userId), {
+      //   loanedAmount: updatedLoanedAmount,
+      // });
 
       const currentBalance = walletDoc.exists
         ? walletDoc.data().balance || 0
