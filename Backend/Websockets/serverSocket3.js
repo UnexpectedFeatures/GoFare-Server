@@ -20,7 +20,9 @@ import { handleActivateNFC } from "../Controllers/RFID-NFC/activateNFC.js";
 import { handleRefundRequests } from "../Controllers/Refund/requestRefund.js";
 import { handleFetchRejectedRefunds } from "../Controllers/Refund/fetchRefundRejected.js";
 import { handleFetchApprovedRefunds } from "../Controllers/Refund/fetchRefundApproved.js";
-import {handleToggleUserStatus} from "../Controllers/Users/changeStatusUser.js";
+import { handleToggleUserStatus } from "../Controllers/Users/changeStatusUser.js";
+import { handleProvideRFID } from "../Controllers/RFID-NFC/provideRFID.js";
+import { handleProvideNFC } from "../Controllers/RFID-NFC/provideNFC.js";
 
 dotenv.config();
 
@@ -107,12 +109,17 @@ function startSocket3() {
         handleActivateNFC(ws, msg);
         console.log("Activate NFC received");
       } else if (msg.trim().startsWith("[Archive_User]")) {
-    
         console.log("Archive user request received");
-      }else if (msg.trim().startsWith("[Toggle_User_Status]")) {
+      } else if (msg.trim().startsWith("[Toggle_User_Status]")) {
         handleToggleUserStatus(ws, msg);
         console.log("Change user status request received");
-      }else {
+      } else if (msg.trim().startsWith("[Provide_RFID]")) {
+        handleProvideRFID(ws, msg);
+        console.log("Provide RFID request received");
+      } else if (msg.trim().startsWith("[Provide_NFC]")) {
+        handleProvideNFC(ws, msg);
+        console.log("Provide NFC request received");
+      } else {
         console.log("Unknown command received.");
         ws.send("[ERROR] Unknown command.");
       }
