@@ -1,4 +1,7 @@
 import admin from "firebase-admin";
+import { DateTime } from "luxon";
+
+const utc8Date = DateTime.now().setZone("Asia/Manila").toJSDate();
 
 export async function handleDeleteAdmin(ws, message) {
   try {
@@ -19,53 +22,47 @@ export async function handleDeleteAdmin(ws, message) {
 
     if (!docSnapshot.exists) {
       console.log(`Admin with userId ${userId} not found in Firestore`);
-      ws.send(
-        `[Delete_Admin_Response] Error: Admin with userId ${userId} not found`
-      );
+      ws.send(`[Delete_Admin_Response] Error: Admin with userId ${userId} not found`);
       return;
     }
 
     const adminData = docSnapshot.data();
 
-    // Extract only required fields
+    // Prepare data for archive
     const archiveData = {
       email: adminData.email || "",
       firstName: adminData.firstName || "",
       middleName: adminData.middleName || "",
       lastName: adminData.lastName || "",
       password: adminData.password || "",
+      deletionDate: utc8Date
     };
 
-    try {
-      await firestore.collection("AdminArchive").doc(userId).set(archiveData);
-      console.log(`Admin data archived to AdminArchive for ${userId}`);
-    } catch (archiveError) {
-      console.error("Archiving Error:", archiveError.message);
-      ws.send(`[Delete_Admin_Response] Error archiving admin: ${archiveError.message}`);
-      return;
-    }
+    // Archive to AdminArchive
+    await firestore.collection("AdminArchive").doc(userId).set(archiveData);
+    console.log(`Admin data archived to AdminArchive for ${userId}`);
 
+    // Try deleting from Firebase Auth
     try {
       await admin.auth().deleteUser(userId);
       console.log(`Auth: Deleted user ${userId}`);
     } catch (authError) {
-      console.error("Auth Error:", authError.message);
-      ws.send(`[Delete_Admin_Response] Error deleting from Auth: ${authError.message}`);
-      return;
+      if (authError.code === "auth/user-not-found") {
+        console.warn(`Auth: User ${userId} not found, skipping deletion.`);
+      } else {
+        throw new Error(`Auth deletion failed: ${authError.message}`);
+      }
     }
 
-    try {
-      await docRef.delete();
-      console.log(`Firestore: Deleted document for ${userId}`);
-    } catch (dbError) {
-      console.error("Firestore Error:", dbError.message);
-      ws.send(`[Delete_Admin_Response] Error deleting from Firestore: ${dbError.message}`);
-      return;
-    }
+    // Delete from Admins collection
+    await docRef.delete();
+    console.log(`Firestore: Deleted document for ${userId}`);
 
+    // ✅ Only one success message sent here
     ws.send(`[Delete_Admin_Response] Success: Admin ${userId} archived and deleted`);
+
   } catch (error) {
-    console.error("General Error:", error.message);
+    console.error("DeleteAdmin Error:", error.message);
     ws.send(`[Delete_Admin_Response] Error: ${error.message}`);
   }
 }

@@ -8,7 +8,9 @@ import { handleFetchArchiveAdmins } from "../Controllers/Admins/fetchArchive.js"
 import { handleInsertAdmin } from "../Controllers/Admins/insertAdmins.js";
 import { handleDeleteAdmin } from "../Controllers/Admins/deleteAdmin.js";
 import { handleUpdateAdmin } from "../Controllers/Admins/updateAdmin.js";
+import { handleExpiredAdmin } from "../Controllers/Admins/deleteExpiredAdmin.js";
 import { handleSuspendAdmin } from "../Controllers/Admins/suspendAdmin.js";
+import { handleRetrieveAdmin } from "../Controllers/Admins/retrieveAdmin.js";
 import { handleInsertUser } from "../Controllers/Users/insertUsers.js";
 import { handleDeleteUser } from "../Controllers/Users/deleteUser.js";
 import { handleUpdateUser } from "../Controllers/Users/updateUser.js";
@@ -71,14 +73,20 @@ function startSocket3() {
       } else if (msg.trim().startsWith("[Delete_Admin]")) {
         console.log("Delete admin request received");
         handleDeleteAdmin(ws, msg);
+      } else if (msg.trim().startsWith("[Delete_Expired_Admins]")) {
+        console.log("Delete expired admin archive request received");
+        handleExpiredAdmin(ws, msg);
       } else if (msg.trim().startsWith("[Update_Admin]")) {
         console.log("Update admin request received");
         handleUpdateAdmin(ws, msg);
+      } else if (msg.trim().startsWith("[Retrieve_Admin]")) {
+        console.log("Update admin request received");
+        handleRetrieveAdmin(ws, msg);
       } else if (msg.trim().startsWith("[Insert_User]")) {
         console.log("Insert user request received");
         handleInsertUser(ws, msg);
       } else if (msg.trim().startsWith("[Delete_User]")) {
-        console.log("Update admin request received");
+        console.log("Delete admin request received");
         handleDeleteUser(ws, msg);
       } else if (msg.trim().startsWith("[Update_User]")) {
         console.log("Update admin request received");
@@ -130,5 +138,11 @@ function startSocket3() {
 
   console.log(`(Socket 3) WebSocket server started on port`, port);
 }
+
+
+setInterval(() => {
+  console.log("🧪 TESTING: Running expired admin cleanup...");
+  handleExpiredAdmin();
+}, 60 * 2000);
 
 export default startSocket3;
