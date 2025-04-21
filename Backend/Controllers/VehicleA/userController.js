@@ -141,11 +141,11 @@ export async function findUserByRfidOrNfc(rfidOrNfc) {
       rfid: rfidOrNfc,
       scanType: searchType,
       assignmentStatus: result.status,
-      userData: {
-        ...userData,
-        documentId: userId,
-        searchedBy: searchType,
-      },
+      // userData: {
+      //   ...userData,
+      //   documentId: userId,
+      //   searchedBy: searchType,
+      // },
     };
     broadcastToAll(null, JSON.stringify(successMessage), allClients);
 

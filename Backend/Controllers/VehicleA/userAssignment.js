@@ -390,11 +390,11 @@ async function sendDropoffReceipt(
     const mailOptions = {
       from: process.env.MAIL_USER,
       to: email,
-      subject: `Your ${vehicle.toUpperCase()} Journey Receipt`,
+      subject: `Your GoFare Receipt`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; border: 2px solid #0056b3; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
           <div style="background-color: #0056b3; color: white; padding: 15px; text-align: center;">
-            <h1 style="margin: 0; font-size: 24px; letter-spacing: 1px;">${vehicle.toUpperCase()} JOURNEY RECEIPT</h1>
+            <h1 style="margin: 0; font-size: 24px; letter-spacing: 1px;">GoFare Receipt</h1>
           </div>
           
           <div style="padding: 20px;">
@@ -435,12 +435,12 @@ async function sendDropoffReceipt(
                 <div style="font-weight: bold;">${formattedTime}</div>
               </div>
               <div style="flex: 1; text-align: left;">
-                <div style="color: black; font-size: 12px; margin-bottom: 3px; margin-right: 30px;">SEAT</div>
-                <div style="font-weight: bold;">AA</div>
+                <div style="color: black; font-size: 12px; margin-bottom: 3px; margin-right: 30px;">VEHICLE</div>
+                <div style="font-weight: bold;">A</div>
               </div>
               <div style="flex: 1; text-align: left;">
                 <div style="color: black; font-size: 12px; margin-bottom: 3px;">GATE</div>
-                <div style="font-weight: bold;">B1</div>
+                <div style="font-weight: bold;">A1</div>
               </div>
             </div>
             
@@ -698,7 +698,9 @@ export async function assignPickupOrDropoff(rfidOrNfc) {
         .get();
 
       if (completedATrip.empty) {
-        terminal1Logger.warn(`User ${userName} needs completed A trip before B`);
+        terminal1Logger.warn(
+          `User ${userName} needs completed A trip before B`
+        );
         return { status: "VEHICLE_A_REQUIRED_FIRST" };
       }
     }
