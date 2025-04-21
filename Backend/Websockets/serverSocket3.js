@@ -44,7 +44,7 @@ let socket3Admin = null;
 
 function startSocket3() {
   const port = parseInt(process.env.WS_PORT_3, 10);
-  const wss = new WebSocketServer({ port });
+  const wss = new WebSocketServer({ port, host: "0.0.0.0" });
 
   wss.on("connection", (ws) => {
     console.log("(Socket 3) New client connected on port", port);

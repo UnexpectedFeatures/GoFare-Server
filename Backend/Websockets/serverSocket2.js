@@ -10,7 +10,7 @@ let socket1Client = null;
 
 function startSocket2() {
   const port = parseInt(process.env.WS_PORT_2, 10);
-  const wss = new WebSocketServer({ port });
+  const wss = new WebSocketServer({ port, host: "0.0.0.0" });
 
   wss.on("connection", (ws) => {
     console.log("(Socket 2) New client connected on port", port);
