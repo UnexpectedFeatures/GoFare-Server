@@ -60,7 +60,6 @@ function startSocket3() {
         console.log("Connection is open");
       }
       const msg = message.toString();
-      const data = JSON.parse(msg);
       console.log("RAW MESSAGE:", JSON.stringify(msg));
 
       if (msg.trim().startsWith("[Fetch_Users]")) {

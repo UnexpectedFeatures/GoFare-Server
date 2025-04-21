@@ -30,7 +30,7 @@ export const handleFetchUserRequests = async (ws, message) => {
 
     for (const [requestKey, requestDetails] of Object.entries(userRequests)) {
       if (requestKey.startsWith("UR")) {
-        requests.push({
+        const request = {
           requestId: requestKey,
           userId: userId,
           date: requestDetails.date || "",
@@ -39,7 +39,11 @@ export const handleFetchUserRequests = async (ws, message) => {
           status: requestDetails.status || "",
           time: requestDetails.time || "",
           type: requestDetails.type || "",
-        });
+        };
+
+        console.log(`Fetched for userId: ${userId}`, request);
+
+        requests.push(request);
       }
     }
 

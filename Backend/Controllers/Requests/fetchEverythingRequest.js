@@ -16,10 +16,10 @@ export const handleFetchRequests = async (ws, message) => {
       );
 
       if (isRequestDocument) {
-        for (const [requestKey, requestDetails] of Object.entries(
-          requestData
-        )) {
+        for (const [requestKey, requestDetails] of Object.entries(requestData)) {
           if (!requestKey.startsWith("UR")) continue;
+
+          console.log(`Document ID: ${requestId}, Request Key: ${requestKey}`);
 
           const request = {
             id: `${requestId}/${requestKey}`,
@@ -53,6 +53,8 @@ export const handleFetchRequests = async (ws, message) => {
           time: requestData.time || "",
           type: requestData.type || "",
         };
+
+        console.log("Request Data:", request);
 
         Object.keys(request).forEach((key) => {
           if (request[key] === undefined) {
