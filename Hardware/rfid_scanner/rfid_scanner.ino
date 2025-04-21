@@ -11,9 +11,9 @@
 // PIN 23 MOSI
 // 3.3v and GND
 
-const char* ssid = "11111111";
-const char* password = "22222222";
-const char* websocket_server = "ws://172.20.10.5:4001";
+const char* ssid = "huh?";
+const char* password = "@tam2407";
+const char* websocket_server = "ws://192.168.101.29:4000";
 // const char* ssid = "ZTE_2.4G_emHexQ";
 // const char* password = "ex3pFTqm";
 // const char* websocket_server = "ws://192.168.1.4:4000";

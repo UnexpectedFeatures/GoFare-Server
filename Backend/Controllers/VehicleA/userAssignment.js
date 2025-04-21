@@ -1,5 +1,5 @@
 import db from "../../database.js";
-import { scanningLogger } from "../../Services/logger.js";
+import { terminal1Logger } from "../../Services/logger.js";
 import { allClients, broadcastToAll } from "../../Websockets/serverSocket1.js";
 import transporter from "../../Services/mailSender.js";
 import getFormattedGMT8 from "../../Services/dateFormatter.js";
@@ -28,7 +28,7 @@ async function updateGlobalBankConversion(amountGBP) {
     const conversionDoc = await conversionRef.get();
 
     if (!conversionDoc.exists) {
-      scanningLogger.warn("GlobalBank Conversion document not found");
+      terminal1Logger.warn("GlobalBank Conversion document not found");
       await conversionRef.set({
         PHP: 0,
         lastUpdated: getFormattedGMT8(),
@@ -45,13 +45,13 @@ async function updateGlobalBankConversion(amountGBP) {
       lastUpdated: getFormattedGMT8(),
     });
 
-    scanningLogger.info(
-      `Added £${amountGBP.toFixed(
+    terminal1Logger.info(
+      `Added ₱${amountGBP.toFixed(
         2
       )} to PHP value (New total: ₱${newPHPValue.toFixed(2)})`
     );
   } catch (error) {
-    scanningLogger.error(
+    terminal1Logger.error(
       `Failed to update GlobalBank conversion: ${error.message}`
     );
   }
@@ -93,7 +93,7 @@ async function getActiveEventDiscount() {
 
     return maxDiscount;
   } catch (error) {
-    scanningLogger.error(`Failed to fetch event discounts: ${error.message}`);
+    terminal1Logger.error(`Failed to fetch event discounts: ${error.message}`);
     return 0;
   }
 }
@@ -114,7 +114,7 @@ async function calculateFare(pickupStop, dropoffStop, userId) {
 
     const routeDoc = await db.collection("Route").doc("Route1").get();
     if (!routeDoc.exists) {
-      scanningLogger.error("Route document not found");
+      terminal1Logger.error("Route document not found");
       return {
         fare: 0,
         originalFare: 0,
@@ -137,7 +137,7 @@ async function calculateFare(pickupStop, dropoffStop, userId) {
     const dropoffIndex = stops.findIndex((stop) => stop === dropoffStop);
 
     if (pickupIndex === -1 || dropoffIndex === -1) {
-      scanningLogger.error(`Invalid stops: ${pickupStop} or ${dropoffStop}`);
+      terminal1Logger.error(`Invalid stops: ${pickupStop} or ${dropoffStop}`);
       return {
         fare: 0,
         originalFare: 0,
@@ -175,7 +175,7 @@ async function calculateFare(pickupStop, dropoffStop, userId) {
     }
 
     if (discountApplied) {
-      scanningLogger.info(
+      terminal1Logger.info(
         `Applied discounts for user ${userId}: ${JSON.stringify(
           discountDetails
         )}`
@@ -189,7 +189,7 @@ async function calculateFare(pickupStop, dropoffStop, userId) {
       discountDetails,
     };
   } catch (error) {
-    scanningLogger.error(`Failed to calculate fare: ${error.message}`);
+    terminal1Logger.error(`Failed to calculate fare: ${error.message}`);
     return {
       fare: 0,
       originalFare: 0,
@@ -215,7 +215,7 @@ async function checkUserLoanStatus(userId) {
       loanedAmount: walletData.loanedAmount || 0,
     };
   } catch (error) {
-    scanningLogger.error(`Failed to check loan status: ${error.message}`);
+    terminal1Logger.error(`Failed to check loan status: ${error.message}`);
     return { hasLoan: false, loanedAmount: 0 };
   }
 }
@@ -263,7 +263,7 @@ async function processPayment(userId, amount) {
       };
     }
   } catch (error) {
-    scanningLogger.error(`Payment processing failed: ${error.message}`);
+    terminal1Logger.error(`Payment processing failed: ${error.message}`);
     return { success: false, error: error.message };
   }
 }
@@ -286,7 +286,9 @@ async function recordTransaction(
     await updateGlobalBankConversion(totalAmount);
 
     const walletDoc = await db.collection("UserWallet").doc(userId).get();
-    const hasDiscount = walletDoc.exists ? walletDoc.data().discount : false;
+    const hasDiscount = walletDoc.exists
+      ? walletDoc.data().discount ?? false
+      : false;
 
     const transactionData = {
       currentBalance: paymentResult.remainingBalance,
@@ -316,10 +318,11 @@ async function recordTransaction(
       originalFare,
       paymentResult,
       discountDetails,
+      success: true,
     };
   } catch (error) {
-    scanningLogger.error(`Failed to record transaction: ${error.message}`);
-    return null;
+    terminal1Logger.error(`Failed to record transaction: ${error.message}`);
+    return { success: false, error: error.message };
   }
 }
 
@@ -340,10 +343,10 @@ async function sendDropoffReceipt(
 
     const paymentStatus =
       paymentResult.paymentStatus === "full"
-        ? `FULLY PAID (£${formattedAmount})`
-        : `PARTIALLY PAID (£${paymentResult.amountPaid.toFixed(
+        ? `FULLY PAID (₱${formattedAmount})`
+        : `PARTIALLY PAID (₱${paymentResult.amountPaid.toFixed(
             2
-          )}) - LOAN: £${paymentResult.loanedAmount.toFixed(2)}`;
+          )}) - LOAN: ₱${paymentResult.loanedAmount.toFixed(2)}`;
 
     const dropoffDateTime = new Date(assignmentData.dropoffTime);
     const formattedDate = dropoffDateTime
@@ -366,7 +369,7 @@ async function sendDropoffReceipt(
       discountHtml = `
         <div style="margin-bottom: 10px;">
           <div style="color: black; font-size: 12px;">ORIGINAL FARE</div>
-          <div style="font-weight: bold; font-size: 18px; text-decoration: line-through; color: #777;">£${formattedOriginalAmount}</div>
+          <div style="font-weight: bold; font-size: 18px; text-decoration: line-through; color: #777;">₱${formattedOriginalAmount}</div>
         </div>
       `;
 
@@ -376,7 +379,7 @@ async function sendDropoffReceipt(
             <div style="color: black; font-size: 12px;">${discount.type} (${
           discount.percentage
         }%)</div>
-            <div style="font-weight: bold; font-size: 18px; color: #00aa00;">-£${discount.amount.toFixed(
+            <div style="font-weight: bold; font-size: 18px; color: #00aa00;">-₱${discount.amount.toFixed(
               2
             )}</div>
           </div>
@@ -446,7 +449,7 @@ async function sendDropoffReceipt(
               
               <div style="margin-bottom: 10px;">
                 <div style="color: black; font-size: 12px;">FARE</div>
-                <div style="font-weight: bold; font-size: 20px; color: #0056b3;">£${formattedAmount}</div>
+                <div style="font-weight: bold; font-size: 20px; color: #0056b3;">₱${formattedAmount}</div>
                 <div style="font-size: 12px; margin-top: 5px; color: ${
                   paymentResult.paymentStatus === "partial"
                     ? "#ff0000"
@@ -486,26 +489,26 @@ async function sendDropoffReceipt(
     };
 
     await transporter.sendMail(mailOptions);
-    scanningLogger.info(`Receipt email sent to ${email}`);
+    terminal1Logger.info(`Receipt email sent to ${email}`);
   } catch (error) {
-    scanningLogger.error(`Failed to send receipt email: ${error.message}`);
+    terminal1Logger.error(`Failed to send receipt email: ${error.message}`);
   }
 }
 
 export async function assignPickupOrDropoff(rfidOrNfc) {
   const timestamp = getFormattedGMT8();
-  scanningLogger.info(`Processing RFID/NFC: ${rfidOrNfc} at ${timestamp}`);
+  terminal1Logger.info(`Processing RFID/NFC: ${rfidOrNfc} at ${timestamp}`);
 
   try {
     const userId = await getUserIdFromRfidOrNfc(rfidOrNfc);
     if (!userId) {
-      scanningLogger.warn(`Unrecognized RFID/NFC: ${rfidOrNfc}`);
+      terminal1Logger.warn(`Unrecognized RFID/NFC: ${rfidOrNfc}`);
       return { status: "USER_NOT_FOUND" };
     }
 
     const userDoc = await db.collection("Users").doc(userId).get();
     if (!userDoc.exists) {
-      scanningLogger.warn(`Missing user document: ${userId}`);
+      terminal1Logger.warn(`Missing user document: ${userId}`);
       return { status: "USER_DOCUMENT_NOT_FOUND" };
     }
 
@@ -515,8 +518,8 @@ export async function assignPickupOrDropoff(rfidOrNfc) {
 
     const { hasLoan, loanedAmount } = await checkUserLoanStatus(userId);
     if (hasLoan) {
-      scanningLogger.warn(
-        `User ${userId} has existing loan of £${loanedAmount}`
+      terminal1Logger.warn(
+        `User ${userId} has existing loan of ₱${loanedAmount}`
       );
       return {
         status: "LOAN_OUTSTANDING",
@@ -531,7 +534,7 @@ export async function assignPickupOrDropoff(rfidOrNfc) {
       .get();
 
     if (!currentTrainDoc.exists || !currentTrainDoc.data().stopName) {
-      scanningLogger.error("Invalid train position data");
+      terminal1Logger.error("Invalid train position data");
       return { status: "TRAIN_POSITION_INVALID" };
     }
 
@@ -551,7 +554,7 @@ export async function assignPickupOrDropoff(rfidOrNfc) {
       const assignmentRef = assignmentsCollection.doc(activeTripDoc.id);
 
       if (activeTrip.vehicle !== currentVehicle) {
-        scanningLogger.warn(
+        terminal1Logger.warn(
           `Vehicle mismatch for ${userName} (${activeTrip.vehicle} vs ${currentVehicle})`
         );
         return {
@@ -590,10 +593,18 @@ export async function assignPickupOrDropoff(rfidOrNfc) {
             discountDetails,
           } = await calculateFare(activeTrip.pickupStop, stopName, userId);
 
+          if (totalAmount <= 0) {
+            terminal1Logger.error(`Invalid fare calculated for user ${userId}`);
+            return {
+              status: "INVALID_FARE",
+              message: "Fare calculation failed",
+            };
+          }
+
           const paymentResult = await processPayment(userId, totalAmount);
 
           if (!paymentResult.success) {
-            scanningLogger.error(`Payment failed for user ${userId}`);
+            terminal1Logger.error(`Payment failed for user ${userId}`);
             return {
               status: "PAYMENT_FAILED",
               message: "Payment processing failed",
@@ -601,12 +612,7 @@ export async function assignPickupOrDropoff(rfidOrNfc) {
             };
           }
 
-          const {
-            transactionId,
-            totalAmount: actualAmount,
-            originalFare: actualOriginalFare,
-            discountDetails: actualDiscountDetails,
-          } = await recordTransaction(
+          const transactionResult = await recordTransaction(
             userId,
             userName,
             { ...activeTrip, ...assignmentData },
@@ -615,6 +621,24 @@ export async function assignPickupOrDropoff(rfidOrNfc) {
             originalFare,
             discountDetails
           );
+
+          if (!transactionResult.success) {
+            terminal1Logger.error(
+              `Transaction recording failed for user ${userId}: ${transactionResult.error}`
+            );
+            return {
+              status: "TRANSACTION_FAILED",
+              message: "Failed to record transaction",
+              error: transactionResult.error,
+            };
+          }
+
+          const {
+            transactionId,
+            totalAmount: actualAmount,
+            originalFare: actualOriginalFare,
+            discountDetails: actualDiscountDetails,
+          } = transactionResult;
 
           await sendDropoffReceipt(
             userData.email,
@@ -674,7 +698,7 @@ export async function assignPickupOrDropoff(rfidOrNfc) {
         .get();
 
       if (completedATrip.empty) {
-        scanningLogger.warn(`User ${userName} needs completed A trip before B`);
+        terminal1Logger.warn(`User ${userName} needs completed A trip before B`);
         return { status: "VEHICLE_A_REQUIRED_FIRST" };
       }
     }
@@ -727,7 +751,7 @@ export async function assignPickupOrDropoff(rfidOrNfc) {
       vehicle: currentVehicle,
     };
   } catch (error) {
-    scanningLogger.error(`Processing error: ${error.message}`, {
+    terminal1Logger.error(`Processing error: ${error.message}`, {
       stack: error.stack,
     });
     throw error;

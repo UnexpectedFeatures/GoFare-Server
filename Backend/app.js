@@ -13,6 +13,7 @@ import { applySeniorDiscounts } from "./Controllers/Discounts/discountSeniorSync
 import runSimulation from "./Services/trainRunner.js";
 import paypalRoutes from "./Routes/paypalRoutes.js";
 import { convertPHPToUSD } from "./Services/conversion,js";
+import { autoPurger } from "./Services/autoPurger.js";
 
 dotenv.config();
 const app = express();
@@ -41,6 +42,7 @@ async function initializeApp() {
     await convertPHPToUSD();
     await applySeniorDiscounts();
     await handleDiscountsCounter();
+    await autoPurger();
   } catch (error) {
     console.error("Error initializing the application:", error);
     process.exit(1);

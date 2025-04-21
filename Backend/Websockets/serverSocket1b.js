@@ -21,7 +21,7 @@ export function broadcastToAll(senderWs, message, clientsSet) {
 
 function startSocket1b() {
   const port = parseInt(process.env.WS_PORT_B, 10);
-  const wss = new WebSocketServer({ port, host: "0.0.0.0" });
+  const wss = new WebSocketServer({ port });
 
   wss.on("connection", (ws) => {
     console.log("(Socket 1 Terminal 2) New client connected on port", port);
@@ -42,7 +42,9 @@ function startSocket1b() {
         const lastScannedTime = lastScannedMap.get(rfid);
 
         if (lastScannedTime && now - lastScannedTime < COOLDOWN_MS) {
-          console.log(`(Socket 1 Terminal 2) RFID ${rfid} ignored (cooldown active)`);
+          console.log(
+            `(Socket 1 Terminal 2) RFID ${rfid} ignored (cooldown active)`
+          );
           ws.send(
             JSON.stringify({
               type: "COOLDOWN",
