@@ -76,20 +76,51 @@ async function generateTransactionId(userId) {
   return `TX-${nextNum.toString().padStart(4, "0")}`;
 }
 
+async function getActiveEventDiscount() {
+  try {
+    const eventsSnapshot = await db.collection("Events").get();
+    let maxDiscount = 0;
+
+    eventsSnapshot.forEach((doc) => {
+      const eventData = doc.data();
+      if (
+        eventData.discountPercentage &&
+        typeof eventData.discountPercentage === "number"
+      ) {
+        maxDiscount = Math.max(maxDiscount, eventData.discountPercentage);
+      }
+    });
+
+    return maxDiscount;
+  } catch (error) {
+    scanningLogger.error(`Failed to fetch event discounts: ${error.message}`);
+    return 0;
+  }
+}
+
 async function calculateFare(pickupStop, dropoffStop, userId) {
   try {
     let hasDiscount = false;
+    let eventDiscount = 0;
+
     if (userId) {
       const walletDoc = await db.collection("UserWallet").doc(userId).get();
       if (walletDoc.exists) {
         hasDiscount = walletDoc.data().discount || false;
       }
+
+      eventDiscount = await getActiveEventDiscount();
     }
 
     const routeDoc = await db.collection("Route").doc("Route1").get();
     if (!routeDoc.exists) {
       scanningLogger.error("Route document not found");
-      return 0;
+      return {
+        fare: 0,
+        originalFare: 0,
+        discountApplied: false,
+        discountDetails: [],
+      };
     }
 
     const routeData = routeDoc.data();
@@ -107,23 +138,64 @@ async function calculateFare(pickupStop, dropoffStop, userId) {
 
     if (pickupIndex === -1 || dropoffIndex === -1) {
       scanningLogger.error(`Invalid stops: ${pickupStop} or ${dropoffStop}`);
-      return 0;
+      return {
+        fare: 0,
+        originalFare: 0,
+        discountApplied: false,
+        discountDetails: [],
+      };
     }
 
     const stopsPassed = Math.abs(dropoffIndex - pickupIndex);
     let fare = 13 + stopsPassed * 10;
+    const originalFare = fare;
+    let discountApplied = false;
+    let discountDetails = [];
 
     if (hasDiscount) {
-      const originalFare = fare;
-      fare = fare * 0.9;
-      scanningLogger.info(`Applied 10% discount for user ${userId}`);
-      return { fare, originalFare, discountApplied: true };
+      const discountAmount = fare * 0.1;
+      fare -= discountAmount;
+      discountApplied = true;
+      discountDetails.push({
+        type: "Regular Discount",
+        percentage: 10,
+        amount: discountAmount,
+      });
     }
 
-    return { fare, originalFare: fare, discountApplied: false };
+    if (eventDiscount > 0) {
+      const discountAmount = originalFare * (eventDiscount / 100);
+      fare -= discountAmount;
+      discountApplied = true;
+      discountDetails.push({
+        type: "Event Discount",
+        percentage: eventDiscount,
+        amount: discountAmount,
+      });
+    }
+
+    if (discountApplied) {
+      scanningLogger.info(
+        `Applied discounts for user ${userId}: ${JSON.stringify(
+          discountDetails
+        )}`
+      );
+    }
+
+    return {
+      fare,
+      originalFare,
+      discountApplied,
+      discountDetails,
+    };
   } catch (error) {
     scanningLogger.error(`Failed to calculate fare: ${error.message}`);
-    return { fare: 0, originalFare: 0, discountApplied: false };
+    return {
+      fare: 0,
+      originalFare: 0,
+      discountApplied: false,
+      discountDetails: [],
+    };
   }
 }
 
@@ -202,7 +274,8 @@ async function recordTransaction(
   assignmentData,
   vehicle,
   paymentResult,
-  originalFare
+  originalFare,
+  discountDetails
 ) {
   try {
     const transactionId = await generateTransactionId(userId);
@@ -219,6 +292,7 @@ async function recordTransaction(
       currentBalance: paymentResult.remainingBalance,
       dateTime: getFormattedGMT8(),
       discount: hasDiscount,
+      discountDetails: discountDetails,
       dropoff: assignmentData.dropoffStop,
       loaned: paymentResult.loanedAmount > 0,
       loanedAmount: paymentResult.loanedAmount,
@@ -241,6 +315,7 @@ async function recordTransaction(
       totalAmount,
       originalFare,
       paymentResult,
+      discountDetails,
     };
   } catch (error) {
     scanningLogger.error(`Failed to record transaction: ${error.message}`);
@@ -256,15 +331,12 @@ async function sendDropoffReceipt(
   transactionId,
   totalAmount,
   paymentResult,
-  originalFare
+  originalFare,
+  discountDetails
 ) {
   try {
-    const discountApplied = originalFare !== totalAmount;
-    const discountAmount = originalFare - totalAmount;
-
     const formattedAmount = totalAmount.toFixed(2);
     const formattedOriginalAmount = originalFare.toFixed(2);
-    const formattedDiscountAmount = discountAmount.toFixed(2);
 
     const paymentStatus =
       paymentResult.paymentStatus === "full"
@@ -288,6 +360,29 @@ async function sendDropoffReceipt(
         hour12: true,
       })
       .toUpperCase();
+
+    let discountHtml = "";
+    if (discountDetails.length > 0) {
+      discountHtml = `
+        <div style="margin-bottom: 10px;">
+          <div style="color: black; font-size: 12px;">ORIGINAL FARE</div>
+          <div style="font-weight: bold; font-size: 18px; text-decoration: line-through; color: #777;">£${formattedOriginalAmount}</div>
+        </div>
+      `;
+
+      discountDetails.forEach((discount) => {
+        discountHtml += `
+          <div style="margin-bottom: 10px;">
+            <div style="color: black; font-size: 12px;">${discount.type} (${
+          discount.percentage
+        }%)</div>
+            <div style="font-weight: bold; font-size: 18px; color: #00aa00;">-£${discount.amount.toFixed(
+              2
+            )}</div>
+          </div>
+        `;
+      });
+    }
 
     const mailOptions = {
       from: process.env.MAIL_USER,
@@ -347,20 +442,7 @@ async function sendDropoffReceipt(
             </div>
             
             <div style="border-top: 2px dashed #ccc; padding-top: 15px; text-align: center;">
-              ${
-                discountApplied
-                  ? `
-                <div style="margin-bottom: 10px;">
-                  <div style="color: black; font-size: 12px;">ORIGINAL FARE</div>
-                  <div style="font-weight: bold; font-size: 18px; text-decoration: line-through; color: #777;">£${formattedOriginalAmount}</div>
-                </div>
-                <div style="margin-bottom: 10px;">
-                  <div style="color: black; font-size: 12px;">DISCOUNT (10%)</div>
-                  <div style="font-weight: bold; font-size: 18px; color: #00aa00;">-£${formattedDiscountAmount}</div>
-                </div>
-              `
-                  : ""
-              }
+              ${discountHtml}
               
               <div style="margin-bottom: 10px;">
                 <div style="color: black; font-size: 12px;">FARE</div>
@@ -502,11 +584,11 @@ export async function assignPickupOrDropoff(rfidOrNfc) {
         action = `DROPOFF_${currentVehicle.toUpperCase()}`;
 
         if (userData.email) {
-          const { fare: totalAmount, originalFare } = await calculateFare(
-            activeTrip.pickupStop,
-            stopName,
-            userId
-          );
+          const {
+            fare: totalAmount,
+            originalFare,
+            discountDetails,
+          } = await calculateFare(activeTrip.pickupStop, stopName, userId);
 
           const paymentResult = await processPayment(userId, totalAmount);
 
@@ -523,13 +605,15 @@ export async function assignPickupOrDropoff(rfidOrNfc) {
             transactionId,
             totalAmount: actualAmount,
             originalFare: actualOriginalFare,
+            discountDetails: actualDiscountDetails,
           } = await recordTransaction(
             userId,
             userName,
             { ...activeTrip, ...assignmentData },
             currentVehicle,
             paymentResult,
-            originalFare
+            originalFare,
+            discountDetails
           );
 
           await sendDropoffReceipt(
@@ -540,7 +624,8 @@ export async function assignPickupOrDropoff(rfidOrNfc) {
             transactionId,
             actualAmount,
             paymentResult,
-            actualOriginalFare
+            actualOriginalFare,
+            actualDiscountDetails
           );
         }
       }
