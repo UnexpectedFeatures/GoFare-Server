@@ -60,7 +60,6 @@ function startSocket3() {
         console.log("Connection is open");
       }
       const msg = message.toString();
-      const data = JSON.parse(msg);
       console.log("RAW MESSAGE:", JSON.stringify(msg));
 
       if (msg.trim().startsWith("[Fetch_Users]")) {
@@ -171,11 +170,11 @@ function startSocket3() {
       } else if (msg.trim().startsWith("[Update_Driver]")) {
         console.log("Update drivers request received");
         handleUpdateDriver(ws, msg);
-      } else if (data.event === "createPayment") {
+      } else if (JSON.parse(msg).event === "createPayment") {
+        const data = JSON.parse(msg);
         console.log("Striping Time");
-
-        depositToUser(ws, data)
-      }else {
+        depositToUser(ws, data);
+      } else {
         console.log("Unknown command received.");
         ws.send("[ERROR] Unknown command.");
       }
