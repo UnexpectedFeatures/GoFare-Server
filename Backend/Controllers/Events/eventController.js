@@ -36,8 +36,8 @@ const PH_HOLIDAYS = {
   },
   CHRISTMAS: {
     name: "Christmas Sale",
-    month: 4,
-    date: 21,
+    month: 12,
+    date: 25,
     discountPercentage: 15,
   },
   RIZAL_DAY: {

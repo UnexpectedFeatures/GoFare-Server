@@ -42,7 +42,9 @@ function startSocket1b() {
         const lastScannedTime = lastScannedMap.get(rfid);
 
         if (lastScannedTime && now - lastScannedTime < COOLDOWN_MS) {
-          console.log(`(Socket 1 Terminal 2) RFID ${rfid} ignored (cooldown active)`);
+          console.log(
+            `(Socket 1 Terminal 2) RFID ${rfid} ignored (cooldown active)`
+          );
           ws.send(
             JSON.stringify({
               type: "COOLDOWN",

@@ -33,3 +33,6 @@ export const stripeLogger = createLogger("stripe");
 export const conversionLogger = createLogger("conversion");
 export const discountLogger = createLogger("discount");
 export const eventLogger = createLogger("event");
+export const autoPurgerLogger = createLogger("purger");
+export const terminal1Logger = createLogger("terminalA");
+export const terminal2Logger = createLogger("terminalB");
