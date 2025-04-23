@@ -236,7 +236,7 @@ router.post("/users/ban/:email", async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    await User.update({ status: "banned" }, { where: { email } });
+    await User.update({ status: user.status,  }, { where: { email } });
 
     res.json({ message: "User banned successfully" });
   } catch (error) {

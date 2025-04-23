@@ -3,6 +3,7 @@ import { useState, useContext } from "react";
 import { motion } from "framer-motion";
 import axios from "axios";
 import { AuthContext } from "./AuthContext";
+import { useTheme } from "./ThemeContext";
 
 function AdminLogin() {
     const { setIsLoggedIn } = useContext(AuthContext);
@@ -11,11 +12,14 @@ function AdminLogin() {
     const [errorMessage, setErrorMessage] = useState("");
     const [successMessage, setSuccessMessage] = useState("");
     const navigate = useNavigate();
+    const { setDarkMode } = useTheme();
+
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setErrorMessage("");
         setSuccessMessage("");
+        setDarkMode(false);
 
         // Validate if fields are empty
         if (!email || !password) {
@@ -40,7 +44,7 @@ function AdminLogin() {
                 }
                 
                 if (res.data.role.toLowerCase() === "admin" || res.data.role.toLowerCase() === "moderator") {
-                    setSuccessMessage("Login successful!");
+                    
                     localStorage.setItem("userToken", res.data.token);
                     localStorage.setItem("userEmail", email);
                     localStorage.setItem("userRole", res.data.role.toLowerCase());

@@ -52,18 +52,22 @@ router.post("/adminLogin", async (req, res) => {
         res.status(500).json({ message: "An error occurred. Please try again." });
     }
 });
-
 router.post("/create-mod", async (req, res) => {
     console.log("🔹 Received Data:", req.body); // ✅ Log request payload
 
     const { username, email, password, phone, gender, birthday, address } = req.body;
 
-    const existingMod = await AdminModel.findOne({ email });
     if (!username || !email || !password || !phone || !gender || !birthday || !address) {
         return res.status(400).json({ message: "All fields are required!" });
     }
-    
+
     try {
+        // 🔹 Check if email already exists
+        const existingMod = await AdminModel.findOne({ where: { email } });
+        if (existingMod) {
+            return res.status(400).json({ message: "Email is already taken!" });
+        }
+
         // 🔹 Hash password before saving
         const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -84,14 +88,7 @@ router.post("/create-mod", async (req, res) => {
         res.status(201).json({ message: "Moderator created successfully!", newMod });
     } catch (error) {
         console.error("🔹 Error creating moderator:", error);
-        
-        
-        if (existingMod) {
-            return res.status(400).json({ message: "Email is already taken!" });
-        }
-        else {
-            res.status(500).json({ message: "Server error" });
-        }
+        res.status(500).json({ message: "Server error" });
     }
 });
 

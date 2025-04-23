@@ -1,38 +1,30 @@
+
+
+
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { ThemeProvider } from "./ThemeContext";
 import { AuthProvider } from "./AuthContext";
-import Setting from "./Setting";
-import Profile from "./Profile";
 import Topbar from "./Topbar";
 import Footer from "./Footer";
-import Login from "./Login";
-import ForgotPassword from "./ForgotPassword";
-import ResetPassword from "./ResetPassword";
-import News from "./News";
-import Home from "./Home";
-import AboutUs from "./AboutUs";
 import AdminLogin from "./AdminLogin";
-import UserPannel from "./UserPannel";
 import { useContext } from "react";
 import { AuthContext } from "./AuthContext";
 import AdminPannel from './AdminPannel';
 import AdminNavBar from './AdminNavBar';
 import ErrorBoundary from './ErrorBoundary';
 import ModList from './ModList';
-import EventPannel from './EventPannel';
+import AdminArchive from "./AdminArchive";
 import CreateMod from './CreateMod';
 import UserList from "./UserList";
-import EventList from './EventList';
+import UserArchive from "./UserArchive";
 import BanRequest from "./BanRequest";
 import AccountAppeal from "./AccountAppeal";
-import ChangePass from "./ChangePass";
-import Donation from "./Donation";
 
 function Layout() {
   const location = useLocation();
 
   // Define all admin-related routes
-  const adminRoutes = ["/admin-pannel", "/appeal", "/user-list", "/mod-list", "/event-pannel", "/event-list", "/create-mod"];
+  const adminRoutes = ["/admin-pannel", "/appeal", "/user-list", "/mod-list", "/admin-archive", "/user-archive", "/create-mod"];
 
   // Check if the current route is in the admin section but NOT admin-login
   const isAdminSection = adminRoutes.includes(location.pathname);
@@ -46,28 +38,18 @@ function Layout() {
       {/* Show AdminNavBar only on admin-related pages (excluding admin-login) */}
       {isAdminSection && <AdminNavBar />}
 
-      <main className="flex-grow mt-16 sm:mt-20 md:mt-24 lg:mt-28">
+      <main className={`flex-grow mt-16 sm:mt-20 md:mt-24 lg:mt-28 ${isAdminSection ? 'mb-20' : ''}`}>
+
         <Routes>
-          <Route path="/" element={<Navigate to="/home" />} />
-          <Route path="/home" element={<Home />} />
+          <Route path="/" element={<Navigate to="/admin-login" />} />
           <Route path="/admin-login" element={<ProtectedAdminLogin />} />
-          <Route path="/login" element={<ProtectedLogin />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/reset-password/:token" element={<ResetPassword />} />
-          <Route path="/setting" element={<Setting />} />
-          <Route path="/donation" element={<Donation />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/change-pass" element={<ChangePass />} />
-          <Route path="/news" element={<News />} />
-          <Route path="/about" element={<AboutUs />} />
           <Route path="/user-list" element={<UserList />} />
+          <Route path="/user-archive" element={<UserArchive />} />
           <Route path="/appeal" element={<AccountAppeal />} />
           <Route path="/mod-list" element={<ModList />} />
-          <Route path="/event-pannel" element={<EventPannel />} />
+          <Route path="/admin-archive" element={<AdminArchive />} />
           <Route path="/ban-request" element={<BanRequest />} />
-          <Route path="/event-list" element={<EventList />} />
           <Route path="/create-mod" element={<CreateMod />} />
-          <Route path="/user-pannel" element={<ProtectedRoute component={UserPannel} />} />
           <Route path="/admin-pannel" element={<ProtectedRoute component={AdminPannel} adminOnly={true} />} />
         </Routes>
       </main>
@@ -91,18 +73,6 @@ function App() {
   );
 }
 
-const ProtectedLogin = () => {
-  const { isLoggedIn } = useContext(AuthContext);
-  const userRole = localStorage.getItem("userRole")?.toLowerCase();
-
-  if (!isLoggedIn) {
-    return <Login />;
-  }
-
-  // Redirect admins to /admin-pannel, others to /user-pannel
-  return <Navigate to={userRole === "admin" ? "/admin-pannel" : "/user-pannel"} />;
-};
-
 const ProtectedAdminLogin = () => {
   const { isLoggedIn } = useContext(AuthContext);
   const userRole = localStorage.getItem("userRole")?.toLowerCase();
@@ -116,25 +86,23 @@ const ProtectedAdminLogin = () => {
 
 const ProtectedRoute = ({ component: Component, adminOnly = false }) => {
   const { isLoggedIn } = useContext(AuthContext);
-  const userRole = localStorage.getItem("userRole");
+  const userRole = localStorage.getItem("userRole")?.toLowerCase();
 
   if (!isLoggedIn) {
-    return <Navigate to="/login" replace />;
+    // Redirect to admin-login if it's an admin page
+    return adminOnly ? <Navigate to="/admin-login" replace /> : <Navigate to="/login" replace />;
   }
 
   if (adminOnly) {
-    if (!userRole) {
-      return null;
-    }
-
-    if (userRole.toLowerCase() === "admin" || userRole.toLowerCase() === "moderator") {
+    if (userRole === "admin" || userRole === "moderator") {
       return <Component />;
     }
-
+    // Logged-in users without admin/moderator role go to user panel
     return <Navigate to="/user-pannel" replace />;
   }
 
   return <Component />;
 };
+
 
 export default App;
