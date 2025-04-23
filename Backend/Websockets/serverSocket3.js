@@ -37,6 +37,7 @@ import { handleUpdateDriver } from "../Controllers/Drivers/updateDriver.js";
 import { handleFetchDrivers } from "../Controllers/Drivers/fetchDriver.js";
 import { handleDeleteDriver } from "../Controllers/Drivers/deleteDriver.js";
 import { depositToUser } from "../Services/stripe.js";
+import { handleUserRequest } from "../Controllers/Requests/userRequest.js"
 
 dotenv.config();
 
@@ -170,6 +171,9 @@ function startSocket3() {
       } else if (msg.trim().startsWith("[Update_Driver]")) {
         console.log("Update drivers request received");
         handleUpdateDriver(ws, msg);
+      } else if (msg.trim().startsWith("[User_Request]")) {
+        console.log("User created request received");
+        handleUserRequest(ws, msg);
       } else if (JSON.parse(msg).event === "createPayment") {
         const data = JSON.parse(msg);
         console.log("Striping Time");

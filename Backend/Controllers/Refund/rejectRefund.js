@@ -141,7 +141,7 @@ export async function handleRejectRefund(ws, message) {
           </div>
           
           <div style="background-color: #f5f5f5; padding: 15px; text-align: center; font-size: 12px; color: black; border-top: 1px solid #ddd;">
-            <div>Rejected on ${new Date()
+            <div>Issued on ${new Date()
               .toLocaleString("en-GB", {
                 hour: "2-digit",
                 minute: "2-digit",

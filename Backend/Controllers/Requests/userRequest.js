@@ -1,77 +1,65 @@
 import db from "../../database.js";
+import admin from "firebase-admin";
 import transporter from "../../Services/mailSender.js";
 
-export const handleResolveRequest = async (ws, message) => {
+export async function handleUserRequest(ws, message) {
   try {
-    console.log("Resolving user request in Firestore...");
+    const cleanedMessage = message.replace("[User_Request] ", "");
+    console.log("Incoming message:", message);
 
-    const cleanedMessage = message.replace("[Resolve_Request] ", "");
-    const { userId, requestNo } = JSON.parse(cleanedMessage);
+    const { userId, requestId, description, reason, type } =
+      JSON.parse(cleanedMessage);
 
-    if (!userId) {
-      throw new Error("User ID is required");
+    if (!userId || !requestId || !description || !reason || !type) {
+      throw new Error(
+        "userId, requestId, description, reason, and type are required"
+      );
+    }
+    if (!/^UR-\d{4}$/.test(requestId)) {
+      throw new Error(
+        "Request ID must follow the format 'UR-' followed by four digits (e.g., UR-0002)"
+      );
     }
 
-    if (!requestNo) {
-      throw new Error("Request number is required");
-    }
-
-    const userRequestsRef = db.collection("UserRequests").doc(userId);
-    const userDocRef = db.collection("Users").doc(userId);
-
-    const [userRequestsDoc, userDoc] = await Promise.all([
-      userRequestsRef.get(),
-      userDocRef.get(),
-    ]);
-
-    if (!userRequestsDoc.exists) {
-      const response = {
-        type: "ERROR",
-        message: "User requests document not found",
-        timestamp: new Date().toISOString(),
-      };
-      ws.send(JSON.stringify(response));
-      return;
-    }
-
+    const userDoc = await db.collection("Users").doc(userId).get();
     if (!userDoc.exists) {
-      const response = {
-        type: "ERROR",
-        message: `User ${userId} not found`,
-        timestamp: new Date().toISOString(),
-      };
-      ws.send(JSON.stringify(response));
-      return;
+      throw new Error(`User ${userId} not found`);
     }
 
-    const userRequests = userRequestsDoc.data();
     const userData = userDoc.data();
-
-    if (!userRequests[requestNo]) {
-      const response = {
-        type: "ERROR",
-        message: `Request ${requestNo} not found for this user`,
-        timestamp: new Date().toISOString(),
-      };
-      ws.send(JSON.stringify(response));
-      return;
-    }
-
     if (!userData.email) {
       throw new Error(`Email not found for user ${userId}`);
     }
-
     if (!userData.firstName || !userData.lastName) {
       throw new Error(`First name or last name not found for user ${userId}`);
     }
 
-    await userRequestsRef.update({
-      [requestNo]: {
-        ...userRequests[requestNo],
-        status: "Resolved",
-        resolvedAt: new Date().toISOString(),
+    const userRequestsRef = db.collection("UserRequests").doc(userId);
+    const userRequestsDoc = await userRequestsRef.get();
+    if (userRequestsDoc.exists && userRequestsDoc.data()[requestId]) {
+      throw new Error(`Request ${requestId} already exists for user ${userId}`);
+    }
+
+    const requestData = {
+      date: new Date().toISOString().split("T")[0],
+      description,
+      reason,
+      requestId,
+      type,
+      status: "Pending",
+      time: new Date().toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
+
+    await userRequestsRef.set(
+      {
+        [requestId]: requestData,
       },
-    });
+      { merge: true }
+    );
 
     const formattedName = `${
       userData.firstName.charAt(0).toUpperCase() +
@@ -84,11 +72,11 @@ export const handleResolveRequest = async (ws, message) => {
     const mailOptions = {
       from: process.env.MAIL_USER,
       to: userData.email,
-      subject: `Request Resolution Notice`,
+      subject: `Request Submission Notice`,
       html: `
-        <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; border: 2px solid #28a745; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-          <div style="background-color: #28a745; color: white; padding: 15px; text-align: center;">
-            <h1 style="margin: 0; font-size: 24px; letter-spacing: 1px;">Request Resolved</h1>
+        <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; border: 2px solid #17a2b8; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+          <div style="background-color: #17a2b8; color: white; padding: 15px; text-align: center;">
+            <h1 style="margin: 0; font-size: 24px; letter-spacing: 1px;">Request Submitted</h1>
           </div>
           
           <div style="padding: 20px;">
@@ -99,18 +87,27 @@ export const handleResolveRequest = async (ws, message) => {
               </div>
             </div>
             
-            <div style="background-color: #f5f9ff; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+            <div style="background-color: #e6f7fa; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
               <div style="text-align: center; color: #333;">
-                <p style="margin: 0 0 15px 0;">Your request (ID: ${requestNo}) has been resolved</p>
-                <div style="font-size: 24px; color: #28a745; font-weight: bold;">
-                  STATUS: RESOLVED
+                <p style="margin: 0 0 15px 0;">Your request (ID: ${requestId}) has been submitted</p>
+                <div style="font-size: 24px; color: #17a2b8; font-weight: bold;">
+                  STATUS: PENDING
                 </div>
               </div>
             </div>
             
+            <div style="margin-bottom: 20px;">
+              <div style="color: black; font-size: 12px; margin-bottom: 3px;">REQUEST TYPE</div>
+              <div style="font-weight: bold;">${type}</div>
+            </div>
+            <div style="margin-bottom: 20px;">
+              <div style="color: black; font-size: 12px; margin-bottom: 3px;">DESCRIPTION</div>
+              <div style="font-weight: bold;">${description}</div>
+            </div>
+            
             <div style="display: flex; justify-content: space-between; margin-bottom: 20px; gap: 15px;">
               <div style="flex: 1;">
-                <div style="color: black; font-size: 12px; margin-bottom: 3px;">RESOLUTION DATE</div>
+                <div style="color: black; font-size: 12px; margin-bottom: 3px;">SUBMISSION DATE</div>
                 <div style="font-weight: bold;">${new Date().toLocaleDateString(
                   "en-GB"
                 )}</div>
@@ -142,7 +139,7 @@ export const handleResolveRequest = async (ws, message) => {
                 year: "numeric",
               })
               .toUpperCase()}</div>
-            <div style="margin-top: 10px; color: #28a745; font-weight: bold;">Thank you for using our service</div>
+            <div style="margin-top: 10px; color: #17a2b8; font-weight: bold;">Thank you for using our service</div>
           </div>
         </div>
         
@@ -156,31 +153,11 @@ export const handleResolveRequest = async (ws, message) => {
     await transporter.sendMail(mailOptions);
     console.log(`Email notification sent to ${userData.email}`);
 
-    const response = {
-      type: "SUCCESS",
-      message: `Request ${requestNo} has been resolved successfully. Email notification sent to ${userData.email}.`,
-      requestId: requestNo,
-      userId: userId,
-      timestamp: new Date().toISOString(),
-    };
-
-    if (ws.readyState === ws.OPEN) {
-      ws.send(JSON.stringify(response));
-    } else {
-      console.error("WebSocket not open, cannot send resolution confirmation");
-    }
+    ws.send(
+      `[User_Request_Response] Success: Request ${requestId} created for user ${userId}. Email notification sent to ${userData.email}.`
+    );
   } catch (error) {
-    console.error("Error resolving user request:", error);
-
-    const errorResponse = {
-      type: "ERROR",
-      message: "Failed to resolve request",
-      error: error.message,
-      timestamp: new Date().toISOString(),
-    };
-
-    if (ws.readyState === ws.OPEN) {
-      ws.send(JSON.stringify(errorResponse));
-    }
+    console.error("User request creation failed:", error);
+    ws.send(`[User_Request_Response] Error: ${error.message}`);
   }
-};
+}

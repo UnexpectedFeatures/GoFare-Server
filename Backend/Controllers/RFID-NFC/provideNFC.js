@@ -107,7 +107,7 @@ export async function handleProvideNFC(ws, message) {
           </div>
           
           <div style="background-color: #f5f5f5; padding: 15px; text-align: center; font-size: 12px; color: black; border-top: 1px solid #ddd;">
-            <div>Activated on ${new Date()
+            <div>Issued on ${new Date()
               .toLocaleString("en-GB", {
                 hour: "2-digit",
                 minute: "2-digit",
