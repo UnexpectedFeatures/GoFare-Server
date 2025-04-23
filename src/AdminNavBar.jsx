@@ -57,15 +57,13 @@ function AdminTopBar() {
                 className={`fixed top-14 left-0 h-full bg-gray-800 text-white transition-all duration-300 ${isNavOpen ? "w-64 opacity-100 pointer-events-auto" : "w-0 opacity-0 pointer-events-none"}`}
             >
                 <div className="flex flex-col items-center pt-10 space-y-4">  
-                    {(roles === "admin" || roles === "moderator") && (
-                        <Link to="/admin-pannel" className="w-full">
-                            <button className="w-full cursor-pointer px-4 py-2 text-left hover:bg-gray-700">
-                                ⓘ {isNavOpen && "Admin Info"}
-                            </button>
-                        </Link>
-                    )}
+                    <Link to="/admin-pannel" className="w-full">
+                        <button className="w-full cursor-pointer px-4 py-2 text-left hover:bg-gray-700">
+                            ⓘ {isNavOpen && "Admin Info"}
+                        </button>
+                    </Link>
 
-                    {roles === "admin" && (
+                    {roles === "Super Admin" && (
                         <Link to="/create-mod" className="w-full">
                             <button className="w-full cursor-pointer px-4 py-2 text-left hover:bg-gray-700">
                                 👤 {isNavOpen && "Create Account"}
@@ -78,8 +76,14 @@ function AdminTopBar() {
                             🔸 {isNavOpen && "Request"}
                         </button>
                     </Link>
+
+                    <Link to="/transit" className="w-full">
+                        <button className="w-full cursor-pointer px-4 py-2 text-left hover:bg-gray-700">
+                            🔸 {isNavOpen && "Transit"}
+                        </button>
+                    </Link>
                     
-                    {roles === "admin" && (
+                    {roles === "Super Admin" && (
                         <Link to="/mod-list" className="w-full">
                             <button className="w-full cursor-pointer px-4 py-2 text-left hover:bg-gray-700">
                                 🔹 {isNavOpen && "Moderator List"}
@@ -87,7 +91,7 @@ function AdminTopBar() {
                         </Link>
                     )}
 
-                    {roles === "admin" && (
+                    {roles === "Super Admin" && (
                         <Link to="/admin-archive" className="w-full">
                             <button className="w-full cursor-pointer px-4 py-2 text-left hover:bg-gray-700">
                                 🔹 {isNavOpen && "Moderator Archive"}
@@ -107,6 +111,17 @@ function AdminTopBar() {
                         </button>
                     </Link>
 
+                    <Link to="/driver-list" className="w-full">
+                        <button className="w-full cursor-pointer px-4 py-2 text-left hover:bg-gray-700">
+                        👨‍✈️ {isNavOpen && "Driver List"}
+                        </button>
+                    </Link>
+
+                    <Link to="/driver-archive" className="w-full">
+                        <button className="w-full cursor-pointer px-4 py-2 text-left hover:bg-gray-700">
+                        👨‍✈️ {isNavOpen && "Driver Archive"}
+                        </button>
+                    </Link>
                     <button onClick={handleLogout} className="w-full cursor-pointer px-4 py-2 text-left hover:bg-gray-700">
                         🔴 {isNavOpen && "Logout"}
                     </button>

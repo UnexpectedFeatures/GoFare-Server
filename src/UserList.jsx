@@ -1,11 +1,13 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import axios from "axios";
 
 function UserList() {
+    const socketRef = useRef(null); 
     const [users, setUsers] = useState([]);
     const [filteredUsers, setFilteredUsers] = useState([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [modalType, setModalType] = useState(""); // 'edit' or 'register'
+    const [modalType, setModalType] = useState(""); 
+    const [admins, setAdmins] = useState([]);
     const [formData, setFormData] = useState({
         email: "",
         firstName: "",
@@ -26,19 +28,59 @@ function UserList() {
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedUser, setSelectedUser] = useState(null);
 
-    useEffect(() => {
-        const fetchUsers = async () => {
-            try {
-                const role = localStorage.getItem("userRole")?.toLowerCase();
-                const response = await axios.get(`http://localhost:5000/api/auth/users/${role}`);
-                setUsers(response.data);
-                setFilteredUsers(response.data); // Initially, show all users
-            } catch (error) {
-                console.error("Error fetching users:", error);
+    const connectWebSocket = () => {
+        socketRef.current = new WebSocket("ws://localhost:3003");
+
+        socketRef.current.onopen = () => {
+            console.log("WebSocket connected: requesting Admins and Users");
+            socketRef.current.send(JSON.stringify({ tag: "Fetch_Admins" }));
+            socketRef.current.send(JSON.stringify({ tag: "Fetch_Users" }));
+        };
+
+        socketRef.current.onmessage = (event) => {
+            const rawData = event.data;
+            if (rawData.startsWith("[Admins_Data]")) {
+                const jsonStr = rawData.replace("[Admins_Data] ", "");
+                try {
+                    const parsed = JSON.parse(jsonStr);
+                    setAdmins(parsed);
+                } catch (err) {
+                    console.error("Failed to parse admin data:", err);
+                }
+            } else if (rawData.startsWith("[Users_Data]")) {
+                const jsonStr = rawData.replace("[Users_Data] ", "");
+                try {
+                    const parsed = JSON.parse(jsonStr);
+                    setUsers(parsed);
+                    setFilteredUsers(parsed);
+                } catch (err) {
+                    console.error("Failed to parse user data:", err);
+                }
             }
         };
-        fetchUsers();
-    }, []);
+
+        socketRef.current.onerror = (err) => {
+            console.error("WebSocket error:", err);
+            // Attempt to reconnect
+            setTimeout(connectWebSocket, 3000); // Retry after 3 seconds
+        };
+
+        socketRef.current.onclose = () => {
+            console.log("WebSocket closed");
+            // Attempt to reconnect if WebSocket closes unexpectedly
+            setTimeout(connectWebSocket, 3000); // Retry after 3 seconds
+        };
+    };
+
+    useEffect(() => {
+        connectWebSocket(); // Establish the WebSocket connection when the component mounts
+
+        return () => {
+            if (socketRef.current) {
+                socketRef.current.close(); // Clean up WebSocket on unmount
+            }
+        };
+    }, []); 
 
     useEffect(() => {
         if (searchTerm === "") {
@@ -130,7 +172,7 @@ function UserList() {
 
     const handleRegisterAdmin = async () => {
         try {
-            await axios.post("http://localhost:5000/api/auth/users/register", newAdminData);
+            await axios.post("http://localhost:3003/api/auth/users/register", newAdminData);
             setUsers(prev => [...prev, newAdminData]);
             setFilteredUsers(prev => [...prev, newAdminData]); // Add new admin to filtered list
             handleCloseModal();
@@ -219,6 +261,7 @@ function UserList() {
                                 </tr>
                             ))}
                         </tbody>
+
                     </table>
                 </div>
                 <div className="mt-4 text-center">

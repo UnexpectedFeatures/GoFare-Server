@@ -1,107 +1,97 @@
-import React, { useEffect, useState, useRef } from "react"; // <-- include useRef
+import React, { useEffect, useState, useRef } from "react";
 import WebSocketAdminClient from "./WebsocketAdminRepository";
 
-function AdminArchive() {
+function DriverArchive() {
     const socketRef = useRef(null);
-    const [admins, setAdmins] = useState([]);
-    const [filteredAdmins, setFilteredAdmins] = useState([]);
+    const [drivers, setDrivers] = useState([]);
+    const [filteredDrivers, setFilteredDrivers] = useState([]);
     const [isSocketReady, setIsSocketReady] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
-    
+
     useEffect(() => {
-        const adminSocket = new WebSocketAdminClient();
-        socketRef.current = adminSocket;
-    
-        adminSocket.readyPromise.then(() => {
-            setIsSocketReady(true); // ✅ Socket is now ready to use
-            adminSocket.send("[Fetch_Admins_Archive]");
+        const driverSocket = new WebSocketAdminClient();
+        socketRef.current = driverSocket;
+
+        driverSocket.readyPromise.then(() => {
+            setIsSocketReady(true);
+            driverSocket.send("[Fetch_Drivers_Archive]");
         }).catch(err => {
             console.error("WebSocket failed to connect:", err);
         });
-        
-        
-        adminSocket.onMessage((msg) => {
+
+        driverSocket.onMessage((msg) => {
             console.log("WebSocket message:", msg);
-        
-            // Check if message starts with "[Admins_Data]" and remove it
-            if (msg.startsWith("[Admins_Archive]")) {
-                const cleanedMsg = msg.replace("[Admins_Archive]", "").trim(); // Remove the prefix
-                
+
+            if (msg.startsWith("[Drivers_Archive]")) {
+                const cleanedMsg = msg.replace("[Drivers_Archive]", "").trim();
+
                 let parsed;
                 try {
-                    parsed = JSON.parse(cleanedMsg); // Now parse the JSON data
+                    parsed = JSON.parse(cleanedMsg);
                 } catch (err) {
                     console.warn("Non-JSON message received:", msg);
                     return;
                 }
-        
-                // Assuming the parsed message has the correct format
+
                 if (parsed) {
-                    setAdmins(parsed);
-                    setFilteredAdmins(parsed);
+                    setDrivers(parsed);
+                    setFilteredDrivers(parsed);
+                } else {
+                    console.log("Invalid driver data received:", parsed);
                 }
-                else {
-                    console.log("Invalid admin data received:", parsed);
-                }
-            }
-            else if (msg.startsWith("[Retrieve_Admin_Response]")) {
+            } else if (msg.startsWith("[Retrieve_Driver_Response]")) {
                 console.log("Retrieve response:", msg);
                 setIsSocketReady(true);
-                adminSocket.send("[Fetch_Admins_Archive]");
+                driverSocket.send("[Fetch_Drivers_Archive]");
                 return;
-            }
-            else {
+            } else {
                 console.warn("Unexpected message format:", msg);
             }
         });
-        
-    
+
         return () => {
-            adminSocket.close();
+            driverSocket.close();
         };
     }, []);
-    
-    
 
-    // Filter on searchTerm
     useEffect(() => {
         if (searchTerm === "") {
-            setFilteredAdmins(admins);
+            setFilteredDrivers(drivers);
         } else {
-            const filtered = admins.filter(admin =>
-                admin.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                admin.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                admin.lastName?.toLowerCase().includes(searchTerm.toLowerCase())
+            const filtered = drivers.filter(driver =>
+                driver.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                driver.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                driver.lastName?.toLowerCase().includes(searchTerm.toLowerCase())
             );
-            setFilteredAdmins(filtered);
+            setFilteredDrivers(filtered);
         }
-    }, [admins, searchTerm]);
+    }, [drivers, searchTerm]);
 
-    const handleRetrieve = (adminId) => {
+    const handleRetrieve = (driverId) => {
         const socket = socketRef.current;
         if (!socket || socket.readyState !== WebSocket.OPEN) {
             console.warn("WebSocket not ready");
         }
-        
-        const message = `[Retrieve_Admin] ${JSON.stringify({ userId: adminId })}`;
+
+        const message = `[Retrieve_Driver] ${JSON.stringify({ userId: driverId })}`;
         socket.send(message);
     };
-      
+
     return (
         <div className="min-h-screen bg-gray-100 p-6">
             <div className="bg-white shadow-lg rounded-lg p-6 max-w-6xl mx-auto w-full">
-                <h1 className="text-2xl font-bold text-center mb-4">Admin Panel - Admin Management</h1>
+                <h1 className="text-2xl font-bold text-center mb-4">Driver Panel - Driver Management</h1>
 
                 <input
                     type="text"
-                    placeholder="Search Admins"
+                    placeholder="Search Drivers"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="w-full p-2 border mb-4"
                 />
 
                 <div className="w-full overflow-x-auto">
-                    <table className="table-auto min-w-[1000px] border border-collapse">
+                    <table className="table-auto w-full border border-collapse">
                         <thead>
                             <tr className="bg-gray-200 whitespace-nowrap">
                                 <th className="py-2 px-4 border">ID</th>
@@ -115,22 +105,22 @@ function AdminArchive() {
                             </tr>
                         </thead>
                         <tbody>
-                            {filteredAdmins.map((admin, index) => (
-                                <tr key={admin.id || admin.email || index} className="whitespace-nowrap">
-                                    <td className="py-2 px-4 border">{admin.id}</td>
-                                    <td className="py-2 px-4 border">{admin.firstName}</td>
-                                    <td className="py-2 px-4 border">{admin.middleName}</td>
-                                    <td className="py-2 px-4 border">{admin.lastName}</td>
-                                    <td className="py-2 px-4 border">{admin.email}</td>
-                                    <td className="py-2 px-4 border">{admin.adminLevel}</td>
+                            {filteredDrivers.map((driver, index) => (
+                                <tr key={driver.id || driver.email || index} className="whitespace-nowrap">
+                                    <td className="py-2 px-4 border">{driver.id}</td>
+                                    <td className="py-2 px-4 border">{driver.firstName}</td>
+                                    <td className="py-2 px-4 border">{driver.middleName}</td>
+                                    <td className="py-2 px-4 border">{driver.lastName}</td>
+                                    <td className="py-2 px-4 border">{driver.email}</td>
+                                    <td className="py-2 px-4 border">{driver.adminLevel}</td>
                                     <td className="py-2 px-4 border">
-                                        {admin.enabled ? "active" : "banned"}
+                                        {driver.enabled ? "active" : "banned"}
                                     </td>
                                     <td className="py-2 px-4 border">
                                         <div className="flex gap-1 whitespace-nowrap">
                                             <button
                                                 className="px-2 py-1 rounded bg-green-500 text-white"
-                                                onClick={() => handleRetrieve(admin.id)}
+                                                onClick={() => handleRetrieve(driver.id)}
                                             >
                                                 Retrieve
                                             </button>
@@ -141,10 +131,9 @@ function AdminArchive() {
                         </tbody>
                     </table>
                 </div>
-
             </div>
         </div>
     );
 }
 
-export default AdminArchive;
+export default DriverArchive;

@@ -17,6 +17,8 @@ import AdminArchive from "./AdminArchive";
 import CreateMod from './CreateMod';
 import UserList from "./UserList";
 import UserArchive from "./UserArchive";
+import DriverList from './DriverList';
+import DriverArchive from "./DriverArchive";
 import BanRequest from "./BanRequest";
 import AccountAppeal from "./AccountAppeal";
 
@@ -24,7 +26,7 @@ function Layout() {
   const location = useLocation();
 
   // Define all admin-related routes
-  const adminRoutes = ["/admin-pannel", "/appeal", "/user-list", "/mod-list", "/admin-archive", "/user-archive", "/create-mod"];
+  const adminRoutes = ["/admin-pannel", "/appeal", "/user-list", "/mod-list", "/driver-list", "/driver-archive", "/admin-archive", "/user-archive", "/create-mod"];
 
   // Check if the current route is in the admin section but NOT admin-login
   const isAdminSection = adminRoutes.includes(location.pathname);
@@ -41,13 +43,15 @@ function Layout() {
       <main className={`flex-grow mt-16 sm:mt-20 md:mt-24 lg:mt-28 ${isAdminSection ? 'mb-20' : ''}`}>
 
         <Routes>
-          <Route path="/" element={<Navigate to="/admin-login" />} />
+          <Route path="/" element={<Navigate to="/admin-pannel" />} />
           <Route path="/admin-login" element={<ProtectedAdminLogin />} />
           <Route path="/user-list" element={<UserList />} />
           <Route path="/user-archive" element={<UserArchive />} />
           <Route path="/appeal" element={<AccountAppeal />} />
           <Route path="/mod-list" element={<ModList />} />
           <Route path="/admin-archive" element={<AdminArchive />} />
+          <Route path="/driver-list" element={<DriverList />} />
+          <Route path="/driver-archive" element={<DriverArchive />} />
           <Route path="/ban-request" element={<BanRequest />} />
           <Route path="/create-mod" element={<CreateMod />} />
           <Route path="/admin-pannel" element={<ProtectedRoute component={AdminPannel} adminOnly={true} />} />
@@ -74,6 +78,13 @@ function App() {
 }
 
 const ProtectedAdminLogin = () => {
+  return <AdminLogin />;
+};
+const ProtectedRoute = ({ component: Component, adminOnly = false }) => {
+  
+  return <Component />;
+}
+/*const ProtectedAdminLogin = () => {
   const { isLoggedIn } = useContext(AuthContext);
   const userRole = localStorage.getItem("userRole")?.toLowerCase();
 
@@ -83,7 +94,6 @@ const ProtectedAdminLogin = () => {
 
   return <AdminLogin />;
 };
-
 const ProtectedRoute = ({ component: Component, adminOnly = false }) => {
   const { isLoggedIn } = useContext(AuthContext);
   const userRole = localStorage.getItem("userRole")?.toLowerCase();
@@ -104,5 +114,6 @@ const ProtectedRoute = ({ component: Component, adminOnly = false }) => {
   return <Component />;
 };
 
+*/
 
 export default App;

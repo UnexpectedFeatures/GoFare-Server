@@ -1,11 +1,11 @@
-import React, { useEffect, useState, useRef } from "react"; // <-- include useRef
+import React, { useEffect, useState, useRef } from "react";
 import WebSocketAdminClient from "./WebsocketAdminRepository";
 
 function ModList() {
-    const [emailError, setEmailError] = useState("");
     const socketRef = useRef(null);
-    const [admins, setAdmins] = useState([]);
-    const [filteredAdmins, setFilteredAdmins] = useState([]);
+    const [emailError, setEmailError] = useState("");
+    const [drivers, setDrivers] = useState([]);
+    const [filteredDrivers, setFilteredDrivers] = useState([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [formData, setFormData] = useState({
         email: "",
@@ -14,143 +14,145 @@ function ModList() {
         lastName: ""
     });
     const [isSocketReady, setIsSocketReady] = useState(false);
-    const [selectedAdmin, setSelectedAdmin] = useState(null);
+    const [selectedDriver, setSelectedDriver] = useState(null);
     const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
-    const [newAdminData, setNewAdminData] = useState({
+    const [newDriverData, setNewDriverData] = useState({
         firstName: "",
         middleName: "",
         lastName: "",
         email: "",
-        role: "admin"
+        role: "driver"
     });
     const [searchTerm, setSearchTerm] = useState("");
 
-    
-    
     useEffect(() => {
-        const adminSocket = new WebSocketAdminClient();
-        socketRef.current = adminSocket;
-    
-        adminSocket.readyPromise.then(() => {
-            setIsSocketReady(true); // ✅ Socket is now ready to use
-            adminSocket.send("[Fetch_Admins]");
+        const driverSocket = new WebSocketAdminClient();
+        socketRef.current = driverSocket;
+
+        driverSocket.readyPromise.then(() => {
+            setIsSocketReady(true);
+            driverSocket.send("[Fetch_Drivers]");
         }).catch(err => {
             console.error("WebSocket failed to connect:", err);
         });
-        
-        
-    
-        adminSocket.onMessage((msg) => {
+
+        driverSocket.onMessage((msg) => {
             console.log("WebSocket message:", msg);
-        
-            // Check if message starts with "[Admins_Data]" and remove it
-            if (msg.startsWith("[Admins_Data]")) {
-                const cleanedMsg = msg.replace("[Admins_Data]", "").trim(); // Remove the prefix
-                
+
+            if (msg.startsWith("[Drivers_Data]")) {
+                const cleanedMsg = msg.replace("[Drivers_Data]", "").trim();
+
                 let parsed;
                 try {
-                    parsed = JSON.parse(cleanedMsg); // Now parse the JSON data
+                    parsed = JSON.parse(cleanedMsg);
                 } catch (err) {
                     console.warn("Non-JSON message received:", msg);
                     return;
                 }
-        
-                // Assuming the parsed message has the correct format
+
                 if (parsed) {
-                    setAdmins(parsed);
-                    setFilteredAdmins(parsed);
-                }
-                else {
-                    console.log("Invalid admin data received:", parsed);
+                    setDrivers(parsed);
+                    setFilteredDrivers(parsed);
+                } else {
+                    console.log("Invalid driver data received:", parsed);
                 }
             }
-            else if (msg.startsWith("[Suspend_Admin_Response]")) {
+            else if (msg.startsWith("[Suspend_Driver_Response]")) {
                 console.log("Suspend response:", msg);
                 setIsSocketReady(true);
-                adminSocket.send("[Fetch_Admins]");
+                driverSocket.send("[Fetch_Drivers]");
                 return;
             }
-            else if (msg.startsWith("[Update_Admin_Response]")) {
+            else if (msg.startsWith("[Update_Driver_Response]")) {
                 console.log("Update response:", msg);
                 setIsSocketReady(true);
-                adminSocket.send("[Fetch_Admins]");
+                driverSocket.send("[Fetch_Drivers]");
                 return;
             }
-            else if (msg.startsWith("[Delete_Admin_Response]")) {
-                const response = msg.replace("[Delete_Admin_Response] ", "");
+            else if (msg.startsWith("[Delete_Driver_Response]")) {
+                const response = msg.replace("[Delete_Driver_Response] ", "");
                 console.log("Delete response:", response);
-                adminSocket.send("[Fetch_Admins]");
+                driverSocket.send("[Fetch_Drivers]");
                 return;
             }
-            else if (msg.startsWith("[Insert_Admin_Response]")) {
+            else if (msg.startsWith("[Insert_Driver_Response]")) {
                 console.log("Insert response:", msg);
                 setIsSocketReady(true);
-                adminSocket.send("[Fetch_Admins]");
+                driverSocket.send("[Fetch_Drivers]");
                 return;
             }
             else {
                 console.warn("Unexpected message format:", msg);
             }
         });
-        
-    
+
         return () => {
-            adminSocket.close();
+            driverSocket.close();
         };
     }, []);
-    
-    
 
-    // Filter on searchTerm
     useEffect(() => {
         if (searchTerm === "") {
-            setFilteredAdmins(admins);
+            setFilteredDrivers(drivers);
         } else {
-            const filtered = admins.filter(admin =>
-                admin.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                admin.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                admin.lastName?.toLowerCase().includes(searchTerm.toLowerCase())
+            const filtered = drivers.filter(driver =>
+                driver.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                driver.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                driver.lastName?.toLowerCase().includes(searchTerm.toLowerCase())
             );
-            setFilteredAdmins(filtered);
+            setFilteredDrivers(filtered);
         }
-    }, [admins, searchTerm]);
+    }, [drivers, searchTerm]);
 
-    const handleBan = (admin) => {
-        const updatedAdmin = {
-            userId: admin.id,
-            enabled: !admin.enabled
-        };
-    
-        // Optimistically update the UI (locally) before WebSocket response
-        const updatedAdmins = admins.map(a => 
-            a.id === admin.id ? { ...a, enabled: !admin.enabled } : a
-        );
-    
-        setAdmins(updatedAdmins);
-        setFilteredAdmins(updatedAdmins);
-    
-        socketRef.current.send("[Suspend_Admin] " + JSON.stringify(updatedAdmin));
+    const handleAgeInput = (e) => {
+        const { value } = e.target;
+        if (/^\d{0,3}$/.test(value)) {
+            setNewAdminData(prev => ({ ...prev, age: value }));
+        }
     };
 
-    const handleEdit = (adminId) => {
-        const admin = admins.find(admin => admin.id === adminId);
-        if (admin) {
-            setSelectedAdmin(admin);
+    const handleContactInput = (e) => {
+        const { value } = e.target;
+        if (/^\d{0,11}$/.test(value)) { 
+            setNewAdminData(prev => ({ ...prev, contactNumber: value }));  
+        }
+    };
+    
+    const handleBan = (driver) => {
+        const updatedDriver = {
+            userId: driver.id,
+            enabled: !driver.enabled
+        };
+
+        const updatedDrivers = drivers.map(d =>
+            d.id === driver.id ? { ...d, enabled: !driver.enabled } : d
+        );
+
+        setDrivers(updatedDrivers);
+        setFilteredDrivers(updatedDrivers);
+
+        socketRef.current.send("[Suspend_Driver] " + JSON.stringify(updatedDriver));
+    };
+
+    const handleEdit = (driverId) => {
+        const driver = drivers.find(driver => driver.id === driverId);
+        if (driver) {
+            setSelectedDriver(driver);
             setFormData({
-                id: admin.id,
-                email: admin.email,
-                firstName: admin.firstName,
-                middleName: admin.middleName,
-                lastName: admin.lastName
+                id: driver.id,
+                email: driver.email,
+                firstName: driver.firstName,
+                middleName: driver.middleName,
+                lastName: driver.lastName
             });
             setIsModalOpen(true);
         }
     };
 
-    const handleRegisterAdmin = (e) => {
+    const handleRegisterDriver = (e) => {
         e.preventDefault();
     
-        const email = newAdminData.email;
+        const email = newDriverData.email;
         const gmailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
     
         if (!gmailRegex.test(email)) {
@@ -161,24 +163,25 @@ function ModList() {
         setEmailError(""); // clear error if valid
     
         const socket = socketRef.current;
-        const message = `[Insert_Admin] ${JSON.stringify({ data: newAdminData })}`;
+        const message = `[Insert_Driver] ${JSON.stringify({ data: newDriverData })}`;
     
-        if (!socket || socket.readyState !==    WebSocket.OPEN) {
+        if (!socket || socket.readyState !== WebSocket.OPEN) {
             console.warn("WebSocket not connected.");
         }
     
         socket.send(message);
         setIsRegisterModalOpen(false);
     };
+    
 
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
-    const handleNewAdminChange = (e) => {
+    const handleNewDriverChange = (e) => {
         const { name, value } = e.target;
-        setNewAdminData(prev => ({ ...prev, [name]: value }));
+        setNewDriverData(prev => ({ ...prev, [name]: value }));
     };
 
     const handleCloseModal = () => {
@@ -188,28 +191,28 @@ function ModList() {
 
     const handleSave = (e) => {
         e.preventDefault();
-        e.persist(); // Prevent React from nullifying the event
-    
+        e.persist();
+
         if (!isSocketReady) {
             console.warn("Socket not ready. Retrying...");
             setTimeout(() => handleSave(e), 300);
             return;
         }
-    
-        if (!selectedAdmin?.id) {
-            console.warn("Missing admin ID for update.");
+
+        if (!selectedDriver?.id) {
+            console.warn("Missing driver ID for update.");
             return;
         }
-    
+
         const socket = socketRef.current;
         if (!socket || socket.readyState !== WebSocket.OPEN) {
             console.warn("WebSocket not connected.");
         }
-    
+
         console.log("Form data being sent:", formData);
-    
-        socket.send("[Update_Admin] " + JSON.stringify({
-            userId: selectedAdmin.id,
+
+        socket.send("[Update_Driver] " + JSON.stringify({
+            userId: selectedDriver.id,
             updatedData: {
                 email: formData.email,
                 firstName: formData.firstName,
@@ -217,39 +220,35 @@ function ModList() {
                 lastName: formData.lastName,
             }
         }));
-    
+
         setIsModalOpen(false);
     };
-    
 
-    const handleDelete = (adminId) => {
+    const handleDelete = (driverId) => {
         const socket = socketRef.current;
         if (!socket || socket.readyState !== WebSocket.OPEN) {
             console.warn("WebSocket not ready");
         }
-        
-        const message = `[Delete_Admin] ${JSON.stringify({ userId: adminId })}`;
+
+        const message = `[Delete_Driver] ${JSON.stringify({ userId: driverId })}`;
         socket.send(message);
     };
-    
-    
-    
 
     return (
         <div className="min-h-screen bg-gray-100 p-6">
             <div className="bg-white shadow-lg rounded-lg p-6 max-w-6xl mx-auto w-full">
-                <h1 className="text-2xl font-bold text-center mb-4">Admin Panel - Admin Management</h1>
+                <h1 className="text-2xl font-bold text-center mb-4">Driver Panel - Driver Management</h1>
 
                 <input
                     type="text"
-                    placeholder="Search Admins"
+                    placeholder="Search Drivers"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="w-full p-2 border mb-4"
                 />
 
                 <div className="w-full overflow-x-auto">
-                    <table className="table-auto w-full border border-collapse">
+                    <table className="table-auto min-w-[1000px] border border-collapse">
                         <thead>
                             <tr className="bg-gray-200 whitespace-nowrap">
                                 <th className="py-2 px-4 border">ID</th>
@@ -263,34 +262,32 @@ function ModList() {
                             </tr>
                         </thead>
                         <tbody>
-                            {filteredAdmins.map((admin, index) => (
-                                <tr key={admin.id || admin.email || index} className="whitespace-nowrap">
-                                    <td className="py-2 px-4 border">{admin.id}</td>
-                                    <td className="py-2 px-4 border">{admin.firstName}</td>
-                                    <td className="py-2 px-4 border">{admin.middleName}</td>
-                                    <td className="py-2 px-4 border">{admin.lastName}</td>
-                                    <td className="py-2 px-4 border">{admin.email}</td>
-                                    <td className="py-2 px-4 border">{admin.adminLevel}</td>
-                                    <td className="py-2 px-4 border">
-                                        {admin.enabled ? "active" : "banned"}
-                                    </td>
+                            {filteredDrivers.map((driver, index) => (
+                                <tr key={driver.id || driver.email || index} className="whitespace-nowrap">
+                                    <td className="py-2 px-4 border">{driver.id}</td>
+                                    <td className="py-2 px-4 border">{driver.firstName}</td>
+                                    <td className="py-2 px-4 border">{driver.middleName}</td>
+                                    <td className="py-2 px-4 border">{driver.lastName}</td>
+                                    <td className="py-2 px-4 border">{driver.email}</td>
+                                    <td className="py-2 px-4 border">{driver.adminLevel}</td>
+                                    <td className="py-2 px-4 border">{driver.enabled ? "active" : "banned"}</td>
                                     <td className="py-2 px-4 border">
                                         <div className="flex gap-1 whitespace-nowrap">
                                             <button
-                                                className={`px-2 py-1 rounded text-white ${admin.enabled ? "bg-red-500" : "bg-green-500"}`}
-                                                onClick={() => handleBan(admin)}
+                                                className={`px-2 py-1 rounded text-white ${driver.enabled ? "bg-red-500" : "bg-green-500"}`}
+                                                onClick={() => handleBan(driver)}
                                             >
-                                                {admin.enabled ? "Ban" : "Unban"}
+                                                {driver.enabled ? "Ban" : "Unban"}
                                             </button>
                                             <button
                                                 className="px-2 py-1 rounded bg-blue-500 text-white"
-                                                onClick={() => handleEdit(admin.id)}
+                                                onClick={() => handleEdit(driver.id)}
                                             >
                                                 Edit
                                             </button>
                                             <button
                                                 className="px-2 py-1 rounded bg-yellow-500 text-white"
-                                                onClick={() => handleDelete(admin.id)}
+                                                onClick={() => handleDelete(driver.id)}
                                             >
                                                 Delete
                                             </button>
@@ -302,23 +299,21 @@ function ModList() {
                     </table>
                 </div>
 
-
-
                 <div className="text-center mt-4">
                     <button
                         className="px-6 py-2 rounded bg-purple-500 text-white"
                         onClick={() => setIsRegisterModalOpen(true)}
                     >
-                        Register New Admin
+                        Register New Driver
                     </button>
                 </div>
             </div>
 
             {/* Edit Modal */}
             {isModalOpen && (
-                    <div className="fixed inset-0 flex justify-center items-center z-50" style={{ backgroundColor: 'rgba(0, 0, 0, 0.9)' }}>
-                    + <div className="bg-white p-6 rounded-lg w-full max-w-6xl mx-auto">
-                        <h2 className="text-xl font-semibold mb-4">Edit Admin</h2>
+                <div className="fixed inset-0 flex justify-center items-center z-50" style={{ backgroundColor: 'rgba(0, 0, 0, 0.9)' }}>
+                    <div className="bg-white p-6 rounded-lg w-96">
+                        <h2 className="text-xl font-semibold mb-4">Edit Driver</h2>
                         <form onSubmit={handleSave}>
                             {["email", "firstName", "middleName", "lastName"].map((field) => (
                                 <label key={field} className="block mb-2 capitalize">
@@ -356,13 +351,15 @@ function ModList() {
                 </div>
             )}
 
-
             {/* Register Modal */}
             {isRegisterModalOpen && (
-                <div className="fixed inset-0 flex justify-center items-center z-50" style={{ backgroundColor: 'rgba(0, 0, 0, 0.9)' }}>
-                    <div className="bg-white p-6 rounded-lg w-96">
-                        <h2 className="text-xl font-semibold mb-4">Register New Admin</h2>
-                        <form onSubmit={handleRegisterAdmin}>
+                <div
+                    className="fixed inset-0 flex justify-center items-center z-50"
+                    style={{ backgroundColor: 'rgba(0, 0, 0, 0.9)' }}
+                >
+                    <div className="bg-white p-6 rounded-lg w-96 shadow-lg">
+                        <h2 className="text-xl font-semibold mb-4">Register New Driver</h2>
+                        <form onSubmit={handleRegisterDriver}>
                             {/* Your input fields here */}
 
                             {["firstName", "middleName", "lastName", "email"].map((field) => (
@@ -374,8 +371,8 @@ function ModList() {
                                         id={field}
                                         type={field === "email" ? "email" : "text"}
                                         name={field}
-                                        value={newAdminData[field]}
-                                        onChange={handleNewAdminChange}
+                                        value={newDriverData[field]}
+                                        onChange={handleNewDriverChange}
                                         className="w-full p-2 border rounded"
                                         required={field !== "middleName"}
                                     />
@@ -405,9 +402,11 @@ function ModList() {
                                 </button>
                             </div>
                         </form>
+
                     </div>
                 </div>
-            )}
+                )}
+
         </div>
     );
 }
