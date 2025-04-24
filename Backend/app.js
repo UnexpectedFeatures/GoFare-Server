@@ -16,6 +16,7 @@ import { convertPHPToUSD } from "./Services/conversion,js";
 import { autoPurger } from "./Services/autoPurger.js";
 import { startPeriodicDownload } from "./Tesseract/firebaseStorage.js";
 import { initializeOCR, shutdownOCR } from "./Tesseract/tesseract.js";
+import { startFileMonitor } from "./Tesseract/ftComparer.js";
 
 dotenv.config();
 const app = express();
@@ -48,6 +49,8 @@ async function initializeApp() {
     await applySeniorDiscounts();
     await handleDiscountsCounter();
     await autoPurger();
+
+    startFileMonitor();
   } catch (error) {
     console.error("Error initializing the application:", error);
     process.exit(1);
