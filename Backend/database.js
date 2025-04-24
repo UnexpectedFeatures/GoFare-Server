@@ -11,12 +11,12 @@ const serviceAccount = JSON.parse(
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
   databaseURL: process.env.FIREBASE_DATABASE_URL,
+  storageBucket: "gs://appdev-75624.firebasestorage.app",
 });
-
-console.log("Firestore connected successfully!");
 
 const db = admin.firestore();
 
 export default db;
 export const auth = admin.auth();
 export const messaging = admin.messaging();
+export const bucket = admin.storage().bucket();

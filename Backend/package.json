@@ -11,6 +11,7 @@
   "license": "ISC",
   "type": "module",
   "dependencies": {
+    "@google-cloud/storage": "^7.16.0",
     "axios": "^1.8.4",
     "backend": "file:",
     "bcrypt": "^5.1.1",
@@ -38,6 +39,7 @@
     "plaid": "^31.1.0",
     "qrcode": "^1.5.4",
     "sequelize": "^6.37.7",
+    "sharp": "^0.34.1",
     "stripe": "^18.0.0",
     "tedious": "^18.6.1",
     "tesseract.js": "^6.0.1",
