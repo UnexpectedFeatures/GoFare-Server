@@ -9,3 +9,5 @@ key.json
 /Logs
 eng.traineddata
 /Tesseract/Images
+/Tesseract/StudentIds
+/Tesseract/ValidIds

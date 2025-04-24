@@ -14,6 +14,7 @@ import runSimulation from "./Services/trainRunner.js";
 import paypalRoutes from "./Routes/paypalRoutes.js";
 import { convertPHPToUSD } from "./Services/conversion,js";
 import { autoPurger } from "./Services/autoPurger.js";
+import { startPeriodicDownload } from "./Tesseract/firebaseStorage.js";
 
 dotenv.config();
 const app = express();
@@ -23,6 +24,8 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cors());
 
 app.use("/api/paypal", paypalRoutes);
+
+const downloadManager = startPeriodicDownload();
 
 async function initializeApp() {
   try {

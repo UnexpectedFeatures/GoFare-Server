@@ -36,3 +36,4 @@ export const eventLogger = createLogger("event");
 export const autoPurgerLogger = createLogger("purger");
 export const terminal1Logger = createLogger("terminalA");
 export const terminal2Logger = createLogger("terminalB");
+export const storageLogger = createLogger("storage");
