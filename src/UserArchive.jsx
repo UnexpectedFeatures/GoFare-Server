@@ -1,108 +1,151 @@
-import React, { useEffect, useState } from "react";
-import axios from "axios";
+import React, { useEffect, useState, useRef } from "react";
+import WebSocketAdminClient from "./WebsocketAdminRepository";
 
-function UserList() {
+function UserArchive() {
+    const socketRef = useRef(null);
     const [users, setUsers] = useState([]);
     const [filteredUsers, setFilteredUsers] = useState([]);
+    const [isSocketReady, setIsSocketReady] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
 
     useEffect(() => {
-        const fetchUsers = async () => {
-            try {
-                const role = localStorage.getItem("userRole")?.toLowerCase();
-                const response = await axios.get(`http://localhost:5000/api/auth/users/${role}`);
-                setUsers(response.data);
-                setFilteredUsers(response.data); // Initially, show all users
-            } catch (error) {
-                console.error("Error fetching users:", error);
+        const userSocket = new WebSocketAdminClient();
+        socketRef.current = userSocket;
+    
+        userSocket.readyPromise.then(() => {
+            setIsSocketReady(true);
+            console.log("Socket is ready. Sending [Fetch_Archived_Users]");
+            userSocket.send("[Fetch_Archived_Users]");
+
+            userSocket.send("[Fetch_Archived_Users]");
+        }).catch(err => {
+            console.error("WebSocket failed to connect:", err);
+        });
+    
+        userSocket.onMessage((msg) => {
+            console.log("WebSocket message:", msg);
+    
+            if (msg.startsWith("[Users_Archive]")) {
+                const cleanedMsg = msg.replace("[Users_Archive]", "").trim();
+    
+                let parsed;
+                try {
+                    parsed = JSON.parse(cleanedMsg);
+                } catch (err) {
+                    console.warn("Non-JSON message received:", msg);
+                    return;
+                }
+    
+                if (parsed) {
+                    setUsers(parsed);
+                    setFilteredUsers(parsed);
+                } else {
+                    console.log("Invalid user data received:", parsed);
+                }
             }
+            else if (msg.startsWith("[Retrieve_User_Response]")) {
+                console.log("Retrieve response:", msg);
+                setIsSocketReady(true);
+                userSocket.send("[Fetch_Archived_Users]");
+                return;
+            }
+            else {
+                console.warn("Unexpected message format:", msg);
+            }
+        });
+    
+        return () => {
+            userSocket.close();
         };
-        fetchUsers();
     }, []);
-
+    
     useEffect(() => {
-        if (searchTerm === "") {
-            setFilteredUsers(users); // Show all users if searchTerm is empty
-        } else {
-            const filtered = users.filter(user => {
-                return (
-                    (user.email && user.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                    (user.firstName && user.firstName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                    (user.lastName && user.lastName.toLowerCase().includes(searchTerm.toLowerCase()))
-                );
-            });
-            setFilteredUsers(filtered); // Apply filtering
+        if (!searchTerm) {
+            setFilteredUsers(users);
+            return;
         }
+    
+        const lowerSearch = searchTerm.toLowerCase();
+    
+        const filtered = users.filter(user => {
+            return (
+                (user.id || "").toLowerCase().includes(lowerSearch) ||
+                (user.firstName || "").toLowerCase().includes(lowerSearch) ||
+                (user.lastName || "").toLowerCase().includes(lowerSearch) ||
+                (user.email || "").toLowerCase().includes(lowerSearch) ||
+                (user.address || "").toLowerCase().includes(lowerSearch) ||
+                (user.gender || "").toLowerCase().includes(lowerSearch) ||
+                (user.birthday || "").toLowerCase().includes(lowerSearch) ||
+                (user.age !== undefined && user.age !== null ? user.age.toString().toLowerCase().includes(lowerSearch) : false) ||
+                (user.contactNumber || "").toLowerCase().includes(lowerSearch) ||
+                (typeof user.enabled === "boolean" ? (user.enabled ? "active" : "banned").includes(lowerSearch) : false)
+            );
+        });
+    
+        setFilteredUsers(filtered);
     }, [users, searchTerm]);
+    
 
-    const handleRetrieve = async (userEmail) => {
-        
-    }
-    const handleDelete = async (userEmail) => {
-        try {
-            await axios.delete(`http://localhost:5000/api/auth/users/delete/${userEmail}`);
-            setUsers(users.filter(user => user.email !== userEmail));
-            setFilteredUsers(filteredUsers.filter(user => user.email !== userEmail)); // Update filtered users
-        } catch (error) {
-            console.error("Error deleting user:", error);
+    const handleRetrieve = (id) => {
+        const socket = socketRef.current;
+        if (!socket || socket.readyState !== WebSocket.OPEN) {
+            console.warn("WebSocket not ready");
         }
+
+        const message = `[Retrieve_User] ${JSON.stringify({ userId: id })}`;
+        socket.send(message);
     };
+    
 
     return (
-        <div className="flex justify-center items-center min-h-screen bg-gray-100 p-6">
-            <div className="bg-white shadow-lg rounded-lg p-6 max-w-6xl w-full">
-                <h1 className="text-2xl font-bold text-gray-800 mb-4 text-center">
-                    Admin Panel - User Management
-                </h1>
-                <div className="mb-4">
-                    <input
-                        type="text"
-                        placeholder="Search by email or name..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)} // This will trigger search as the user types
-                        className="p-2 w-full border border-gray-300 rounded"
-                    />
-                </div>
-                <div className="overflow-x-auto">
-                    <table className="min-w-full bg-white border border-gray-300">
+        <div className="min-h-screen bg-gray-100 p-6">
+            <div className="bg-white shadow-lg rounded-lg p-6 max-w-6xl mx-auto w-full">
+                <h1 className="text-2xl font-bold text-center mb-4">User Panel - User Management</h1>
+    
+                <input
+                    type="text"
+                    placeholder="Search Users"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full p-2 border mb-4"
+                />
+    
+                <div className="w-full overflow-x-auto">
+                    <table className="table-auto min-w-[1200px] border border-collapse">
                         <thead>
-                            <tr className="bg-gray-200">
-                                <th className="py-2 px-4 border">ID</th>
+                            <tr className="bg-gray-200 whitespace-nowrap">
                                 <th className="py-2 px-4 border">First Name</th>
                                 <th className="py-2 px-4 border">Middle Name</th>
                                 <th className="py-2 px-4 border">Last Name</th>
                                 <th className="py-2 px-4 border">Email</th>
+                                <th className="py-2 px-4 border">Address</th>
+                                <th className="py-2 px-4 border">Gender</th>
                                 <th className="py-2 px-4 border">Birthday</th>
                                 <th className="py-2 px-4 border">Age</th>
-                                <th className="py-2 px-4 border">Gender</th>
-                                <th className="py-2 px-4 border">Contact</th>
-                                <th className="py-2 px-4 border">Created At</th>
-                                <th className="py-2 px-4 border">Updated At</th>
+                                <th className="py-2 px-4 border">Contact No.</th>
                                 <th className="py-2 px-4 border">Status</th>
                                 <th className="py-2 px-4 border">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {filteredUsers.map((user, index) => (
-                                <tr key={user.id || user.email || index} className="border-t">
-                                    <td className="py-2 px-4 border">{user.id}</td>
+                            {filteredUsers.map((user) => (
+                                <tr key={user.id || user.email} className="whitespace-nowrap">
                                     <td className="py-2 px-4 border">{user.firstName}</td>
                                     <td className="py-2 px-4 border">{user.middleName}</td>
                                     <td className="py-2 px-4 border">{user.lastName}</td>
                                     <td className="py-2 px-4 border">{user.email}</td>
+                                    <td className="py-2 px-4 border">{user.address}</td>
+                                    <td className="py-2 px-4 border">{user.gender}</td>
                                     <td className="py-2 px-4 border">{user.birthday}</td>
                                     <td className="py-2 px-4 border">{user.age}</td>
-                                    <td className="py-2 px-4 border">{user.gender}</td>
                                     <td className="py-2 px-4 border">{user.contactNumber}</td>
-                                    <td className="py-2 px-4 border">{user.createdAt}</td>
-                                    <td className="py-2 px-4 border">{user.updatedAt}</td>
-                                    <td className="py-2 px-4 border">{user.status}</td>
+                                    <td className="py-2 px-4 border">{user.enabled ? "Active" : "Banned"}</td>
                                     <td className="py-2 px-4 border">
-                                        <div className="flex flex-row gap-1.5">
-                                            <button className="px-4 py-1 rounded bg-yellow-500 text-white" onClick={() => handleDelete(user.email)}>
-                                                Delete
-                                            </button>
-                                            <button className="px-4 py-1 rounded bg-green-500 text-white" onClick={() => handleRetrieve(user.email)}>
+                                        <div className="flex gap-1 whitespace-nowrap">
+                                            <button
+                                                className="px-2 py-1 rounded bg-green-500 text-white"
+                                                onClick={() => handleRetrieve(user.id)}
+                                            >
                                                 Retrieve
                                             </button>
                                         </div>
@@ -117,4 +160,4 @@ function UserList() {
     );
 }
 
-export default UserList;
+export default UserArchive;

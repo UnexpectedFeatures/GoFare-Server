@@ -5,10 +5,10 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "r
 import { ThemeProvider } from "./ThemeContext";
 import { AuthProvider } from "./AuthContext";
 import Topbar from "./Topbar";
-import Footer from "./Footer";
 import AdminLogin from "./AdminLogin";
 import { useContext } from "react";
 import { AuthContext } from "./AuthContext";
+import VehicleTransit from "./VehicleTransit";
 import AdminPannel from './AdminPannel';
 import AdminNavBar from './AdminNavBar';
 import ErrorBoundary from './ErrorBoundary';
@@ -26,7 +26,7 @@ function Layout() {
   const location = useLocation();
 
   // Define all admin-related routes
-  const adminRoutes = ["/admin-pannel", "/appeal", "/user-list", "/mod-list", "/driver-list", "/driver-archive", "/admin-archive", "/user-archive", "/create-mod"];
+  const adminRoutes = ["/admin-pannel", "/transit", "/appeal", "/user-list", "/mod-list", "/driver-list", "/driver-archive", "/admin-archive", "/user-archive", "/create-mod"];
 
   // Check if the current route is in the admin section but NOT admin-login
   const isAdminSection = adminRoutes.includes(location.pathname);
@@ -45,6 +45,7 @@ function Layout() {
         <Routes>
           <Route path="/" element={<Navigate to="/admin-pannel" />} />
           <Route path="/admin-login" element={<ProtectedAdminLogin />} />
+          <Route path="/transit" element={<VehicleTransit />} />
           <Route path="/user-list" element={<UserList />} />
           <Route path="/user-archive" element={<UserArchive />} />
           <Route path="/appeal" element={<AccountAppeal />} />
@@ -58,7 +59,6 @@ function Layout() {
         </Routes>
       </main>
 
-      <Footer />
     </div>
   );
 }

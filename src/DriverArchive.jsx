@@ -58,14 +58,26 @@ function DriverArchive() {
         if (searchTerm === "") {
             setFilteredDrivers(drivers);
         } else {
+            const lowerSearch = searchTerm.toLowerCase();
+    
             const filtered = drivers.filter(driver =>
-                driver.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                driver.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                driver.lastName?.toLowerCase().includes(searchTerm.toLowerCase())
+                (driver.id?.toLowerCase() || "").includes(lowerSearch) ||
+                (driver.firstName?.toLowerCase() || "").includes(lowerSearch) ||
+                (driver.lastName?.toLowerCase() || "").includes(lowerSearch) ||
+                (driver.email?.toLowerCase() || "").includes(lowerSearch) ||
+                (driver.address?.toLowerCase() || "").includes(lowerSearch) ||
+                (driver.gender?.toLowerCase() || "").includes(lowerSearch) ||
+                (driver.birthday?.toLowerCase() || "").includes(lowerSearch) ||
+                (driver.age?.toString().toLowerCase() || "").includes(lowerSearch) ||
+                (driver.contactNumber?.toLowerCase() || "").includes(lowerSearch) ||
+                (driver.vehicleType?.toLowerCase() || "").includes(lowerSearch) ||
+                (driver.driverNo?.toString().toLowerCase() || "").includes(lowerSearch)
             );
+                  
             setFilteredDrivers(filtered);
         }
     }, [drivers, searchTerm]);
+    
 
     const handleRetrieve = (driverId) => {
         const socket = socketRef.current;
@@ -94,12 +106,17 @@ function DriverArchive() {
                     <table className="table-auto w-full border border-collapse">
                         <thead>
                             <tr className="bg-gray-200 whitespace-nowrap">
-                                <th className="py-2 px-4 border">ID</th>
-                                <th className="py-2 px-4 border">First</th>
-                                <th className="py-2 px-4 border">Middle</th>
-                                <th className="py-2 px-4 border">Last</th>
+                                <th className="py-2 px-4 border">Driver No</th>
+                                <th className="py-2 px-4 border">First Name</th>
+                                <th className="py-2 px-4 border">Middle Name</th>
+                                <th className="py-2 px-4 border">Last Name</th>
                                 <th className="py-2 px-4 border">Email</th>
-                                <th className="py-2 px-4 border">Role</th>
+                                <th className="py-2 px-4 border">Address</th>
+                                <th className="py-2 px-4 border">Gender</th>
+                                <th className="py-2 px-4 border">Birthday</th>
+                                <th className="py-2 px-4 border">Age</th>
+                                <th className="py-2 px-4 border">Contact No.</th>
+                                <th className="py-2 px-4 border">Vehicle Type</th>
                                 <th className="py-2 px-4 border">Status</th>
                                 <th className="py-2 px-4 border">Actions</th>
                             </tr>
@@ -107,15 +124,18 @@ function DriverArchive() {
                         <tbody>
                             {filteredDrivers.map((driver, index) => (
                                 <tr key={driver.id || driver.email || index} className="whitespace-nowrap">
-                                    <td className="py-2 px-4 border">{driver.id}</td>
+                                    <td className="py-2 px-4 border">{driver.driverNo}</td>
                                     <td className="py-2 px-4 border">{driver.firstName}</td>
                                     <td className="py-2 px-4 border">{driver.middleName}</td>
                                     <td className="py-2 px-4 border">{driver.lastName}</td>
                                     <td className="py-2 px-4 border">{driver.email}</td>
-                                    <td className="py-2 px-4 border">{driver.adminLevel}</td>
-                                    <td className="py-2 px-4 border">
-                                        {driver.enabled ? "active" : "banned"}
-                                    </td>
+                                    <td className="py-2 px-4 border">{driver.address}</td>
+                                    <td className="py-2 px-4 border">{driver.gender}</td>
+                                    <td className="py-2 px-4 border">{driver.birthday}</td>
+                                    <td className="py-2 px-4 border">{driver.age}</td>
+                                    <td className="py-2 px-4 border">{driver.contactNumber}</td>
+                                    <td className="py-2 px-4 border">{driver.vehicleType}</td>
+                                    <td className="py-2 px-4 border">{driver.enabled ? "Active" : "Banned"}</td>
                                     <td className="py-2 px-4 border">
                                         <div className="flex gap-1 whitespace-nowrap">
                                             <button

@@ -1,259 +1,375 @@
 import React, { useEffect, useState, useRef } from "react";
-import axios from "axios";
+import WebSocketAdminClient from "./WebsocketAdminRepository";
 
 function UserList() {
-    const socketRef = useRef(null); 
+    const socketRef = useRef(null);
+    const [emailError, setEmailError] = useState("");
     const [users, setUsers] = useState([]);
     const [filteredUsers, setFilteredUsers] = useState([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [modalType, setModalType] = useState(""); 
-    const [admins, setAdmins] = useState([]);
     const [formData, setFormData] = useState({
         email: "",
         firstName: "",
         middleName: "",
-        lastName: ""
+        lastName: "",
+        address: "",
+        gender: "",
+        birthday: "",
+        age: "",
+        contactNumber: "",
+        enabled: "",
+
     });
-    const [newAdminData, setNewAdminData] = useState({
+    const [isSocketReady, setIsSocketReady] = useState(false);
+    const [selectedUser, setSelectedUser] = useState(null);
+    const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
+    const [newUserData, setNewUserData] = useState({
         firstName: "",
         middleName: "",
         lastName: "",
         email: "",
-        role: "user",
+        address: "",
+        gender: "",
         birthday: "",
         age: "",
-        gender: "",
         contactNumber: "",
+        enabled: "",
     });
     const [searchTerm, setSearchTerm] = useState("");
-    const [selectedUser, setSelectedUser] = useState(null);
 
-    const connectWebSocket = () => {
-        socketRef.current = new WebSocket("ws://localhost:3003");
+    useEffect(() => {
+        const userSocket = new WebSocketAdminClient();
+        socketRef.current = userSocket;
+    
+        userSocket.readyPromise.then(() => {
+            setIsSocketReady(true);
+            console.log("Socket is ready. Sending [Fetch_Users]");
+            userSocket.send("[Fetch_Users]");
 
-        socketRef.current.onopen = () => {
-            console.log("WebSocket connected: requesting Admins and Users");
-            socketRef.current.send(JSON.stringify({ tag: "Fetch_Admins" }));
-            socketRef.current.send(JSON.stringify({ tag: "Fetch_Users" }));
-        };
-
-        socketRef.current.onmessage = (event) => {
-            const rawData = event.data;
-            if (rawData.startsWith("[Admins_Data]")) {
-                const jsonStr = rawData.replace("[Admins_Data] ", "");
+            userSocket.send("[Fetch_Users]");
+        }).catch(err => {
+            console.error("WebSocket failed to connect:", err);
+        });
+    
+        userSocket.onMessage((msg) => {
+            console.log("WebSocket message:", msg);
+    
+            if (msg.startsWith("[Users_Data]")) {
+                const cleanedMsg = msg.replace("[Users_Data]", "").trim();
+    
+                let parsed;
                 try {
-                    const parsed = JSON.parse(jsonStr);
-                    setAdmins(parsed);
+                    parsed = JSON.parse(cleanedMsg);
                 } catch (err) {
-                    console.error("Failed to parse admin data:", err);
+                    console.warn("Non-JSON message received:", msg);
+                    return;
                 }
-            } else if (rawData.startsWith("[Users_Data]")) {
-                const jsonStr = rawData.replace("[Users_Data] ", "");
-                try {
-                    const parsed = JSON.parse(jsonStr);
+    
+                if (parsed) {
                     setUsers(parsed);
                     setFilteredUsers(parsed);
-                } catch (err) {
-                    console.error("Failed to parse user data:", err);
+                } else {
+                    console.log("Invalid user data received:", parsed);
                 }
             }
-        };
-
-        socketRef.current.onerror = (err) => {
-            console.error("WebSocket error:", err);
-            // Attempt to reconnect
-            setTimeout(connectWebSocket, 3000); // Retry after 3 seconds
-        };
-
-        socketRef.current.onclose = () => {
-            console.log("WebSocket closed");
-            // Attempt to reconnect if WebSocket closes unexpectedly
-            setTimeout(connectWebSocket, 3000); // Retry after 3 seconds
-        };
-    };
-
-    useEffect(() => {
-        connectWebSocket(); // Establish the WebSocket connection when the component mounts
-
-        return () => {
-            if (socketRef.current) {
-                socketRef.current.close(); // Clean up WebSocket on unmount
+            else if (msg.startsWith("[Suspend_User_Response]")) {
+                console.log("Suspend response:", msg);
+                setIsSocketReady(true);
+                userSocket.send("[Fetch_Users]");
+                return;
             }
-        };
-    }, []); 
-
-    useEffect(() => {
-        if (searchTerm === "") {
-            setFilteredUsers(users); // Show all users if searchTerm is empty
-        } else {
-            const filtered = users.filter(user => {
-                return (
-                    (user.email && user.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                    (user.firstName && user.firstName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                    (user.lastName && user.lastName.toLowerCase().includes(searchTerm.toLowerCase()))
-                );
-            });
-            setFilteredUsers(filtered); // Apply filtering
-        }
-    }, [users, searchTerm]);
-
-    const handleBan = async (userEmail, isBanned) => {
-        try {
-            const endpoint = isBanned
-                ? `http://localhost:5000/api/auth/users/unban/${userEmail}`
-                : `http://localhost:5000/api/auth/users/ban/${userEmail}`;
-            await axios.post(endpoint);
-            setUsers(users.map(user =>
-                user.email === userEmail ? { ...user, status: isBanned ? "active" : "banned" } : user
-            ));
-        } catch (error) {
-            console.error("Error banning/unbanning user:", error);
-        }
-    };
-
-    const handleDelete = async (userEmail) => {
-        try {
-            await axios.delete(`http://localhost:5000/api/auth/users/delete/${userEmail}`);
-            setUsers(users.filter(user => user.email !== userEmail));
-            setFilteredUsers(filteredUsers.filter(user => user.email !== userEmail)); // Update filtered users
-        } catch (error) {
-            console.error("Error deleting user:", error);
-        }
-    };
-
-    const handleEdit = (userEmail) => {
-        const user = users.find(user => user.email === userEmail);
-        setSelectedUser(user);
-        setFormData({
-            email: user.email,
-            firstName: user.firstName,
-            middleName: user.middleName,
-            lastName: user.lastName
+            else if (msg.startsWith("[Update_User_Response]")) {
+                console.log("Update response:", msg);
+                setIsSocketReady(true);
+                userSocket.send("[Fetch_Users]");
+                return;
+            }
+            else if (msg.startsWith("[Delete_User_Response]")) {
+                const response = msg.replace("[Delete_User_Response] ", "");
+                console.log("Delete response:", response);
+                userSocket.send("[Fetch_Users]");
+                return;
+            }
+            else if (msg.startsWith("[Insert_User_Response]")) {
+                console.log("Insert response:", msg);
+                setIsSocketReady(true);
+                userSocket.send("[Fetch_Users]");
+                return;
+            }
+            else {
+                console.warn("Unexpected message format:", msg);
+            }
         });
-        setModalType("edit"); // Set the modal type to 'edit'
-        setIsModalOpen(true);
+    
+        return () => {
+            userSocket.close();
+        };
+    }, []);
+    
+    useEffect(() => {
+        if (!searchTerm) {
+            setFilteredUsers(users);
+            return;
+        }
+    
+        const lowerSearch = searchTerm.toLowerCase();
+    
+        const filtered = users.filter(user => {
+            return (
+                (user.id || "").toLowerCase().includes(lowerSearch) ||
+                (user.firstName || "").toLowerCase().includes(lowerSearch) ||
+                (user.lastName || "").toLowerCase().includes(lowerSearch) ||
+                (user.email || "").toLowerCase().includes(lowerSearch) ||
+                (user.address || "").toLowerCase().includes(lowerSearch) ||
+                (user.gender || "").toLowerCase().includes(lowerSearch) ||
+                (user.birthday || "").toLowerCase().includes(lowerSearch) ||
+                (user.age?.toString() || "").toLowerCase().includes(lowerSearch) ||
+                (user.contactNumber || "").toLowerCase().includes(lowerSearch) ||
+                (user.enabled?.toString().toLowerCase() || "").includes(lowerSearch)
+            );
+        });
+    
+        setFilteredUsers(filtered);
+    }, [users, searchTerm]);
+    
+    
+    const handleEditAgeInput = (e) => {
+        const { value } = e.target;
+        if (/^\d{0,3}$/.test(value)) {
+            setFormData((prev) => ({ ...prev, age: value }));
+        }
     };
-
-    const handleRegister = () => {
-        setModalType("register"); // Set the modal type to 'register'
-        setIsModalOpen(true); // Open the register modal
+    
+    const handleEditContactInput = (e) => {
+        const { value } = e.target;
+        if (/^\d{0,11}$/.test(value)) {
+            setFormData((prev) => ({ ...prev, contactNumber: value }));
+        }
     };
-
+    
+    const handleAgeInput = (e) => {
+        const { value } = e.target;
+        if (/^\d{0,3}$/.test(value)) { // Allows a number with 1-3 digits (0-999)
+            setNewUserData(prev => ({ ...prev, age: value }));
+        }
+    };
+    
+    const handleContactInput = (e) => {
+        const { value } = e.target;
+        if (/^\d{0,11}$/.test(value)) { // Ensures the input is up to 11 digits
+            setNewUserData(prev => ({ ...prev, contactNumber: value }));
+        }
+    };
+    
+    const handleBan = (userId) => {
+        const updatedUser = {
+            userId: userId,
+            enabled: !users.find(u => u.id === userId).enabled // Toggle the 'enabled' state
+        };
+    
+        const updatedUsers = users.map(u =>
+            u.id === userId ? { ...u, enabled: !u.enabled } : u
+        );
+    
+        setUsers(updatedUsers);
+        setFilteredUsers(updatedUsers);
+    
+        socketRef.current.send("[Suspend_User] " + JSON.stringify(updatedUser));
+    };
+    
+    const handleEdit = (userId) => {
+        const user = users.find(user => user.id === userId);
+        if (user) {
+            setSelectedUser(user);
+            setFormData({
+                id: user.id,
+                email: user.email,
+                firstName: user.firstName,
+                middleName: user.middleName,
+                lastName: user.lastName,
+                gender: user.gender,
+                address: user.address,
+                birthday: user.birthday,
+                age: user.age,
+                contactNumber: user.contactNumber,
+            });
+            setIsModalOpen(true);
+        }
+    };
+    
+    const handleNumericKeyDown = (e) => {
+        const allowedKeys = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'];
+        if (
+            !/[0-9]/.test(e.key) && 
+            !allowedKeys.includes(e.key)
+        ) {
+            e.preventDefault();
+        }
+    };
+    
+    const handleRegisterUser = (e) => {
+        e.preventDefault();
+    
+        const { email, contactNumber, age } = newUserData;
+    
+        const gmailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
+        if (!gmailRegex.test(email)) {
+            setEmailError("Only @gmail.com emails are allowed.");
+            return;
+        }
+    
+        const contactRegex = /^09\d{9}$/;
+        if (!contactRegex.test(contactNumber)) {
+            setEmailError("Contact number must start with '09' and be exactly 11 digits.");
+            return;
+        }
+    
+        const ageRegex = /^\d{1,3}$/;
+        if (!ageRegex.test(age)) {
+            setEmailError("Age must be a numeric value with up to 3 digits.");
+            return;
+        }
+    
+        setEmailError("");
+    
+        const socket = socketRef.current;
+        const message = `[Insert_User] ${JSON.stringify({ data: newUserData })}`;
+    
+        if (!socket || socket.readyState !== WebSocket.OPEN) {
+            console.warn("WebSocket not connected.");
+        }
+    
+        socket.send(message);
+        setIsRegisterModalOpen(false);
+    };
+    
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
     };
-
-    const handleNewAdminChange = (e) => {
+    
+    const handleNewUserChange = (e) => {
         const { name, value } = e.target;
-        setNewAdminData(prev => ({ ...prev, [name]: value }));
+        setNewUserData(prev => ({ ...prev, [name]: value }));
     };
-
+    
     const handleCloseModal = () => {
         setIsModalOpen(false);
-        setFormData({ email: "", firstName: "", middleName: "", lastName: "" });
-        setNewAdminData({ firstName: "", middleName: "", lastName: "", email: "", role: "user", age: "", birthday: "", gender: "", contactNumber: "" });
+        setFormData({ id: "", email: "", firstName: "", middleName: "", lastName: "", birthday: "", age: "", gender: "", contactNumber: "", address: ""});
     };
-
-    const handleSave = async () => {
-        try {
-            await axios.put(`http://localhost:5000/api/auth/users/update/${formData.email}`, formData);
-            setUsers(users.map(user =>
-                user.email === formData.email ? { ...user, ...formData } : user
-            ));
-            setFilteredUsers(filteredUsers.map(user =>
-                user.email === formData.email ? { ...user, ...formData } : user
-            ));
-            handleCloseModal();
-        } catch (error) {
-            console.error("Error updating user:", error);
+    
+    const handleSave = (e) => {
+        e.preventDefault();
+        e.persist();
+    
+        if (!isSocketReady) {
+            console.warn("Socket not ready. Retrying...");
+            setTimeout(() => handleSave(e), 300);
+            return;
         }
-    };
-
-    const handleRegisterAdmin = async () => {
-        try {
-            await axios.post("http://localhost:3003/api/auth/users/register", newAdminData);
-            setUsers(prev => [...prev, newAdminData]);
-            setFilteredUsers(prev => [...prev, newAdminData]); // Add new admin to filtered list
-            handleCloseModal();
-        } catch (error) {
-            console.error("Error registering admin:", error);
+    
+        if (!selectedUser?.id) {
+            console.warn("Missing user ID for update.");
+            return;
         }
-    };
-
-    // Input validation for numeric fields
-    const handleAgeInput = (e) => {
-        const { value } = e.target;
-        if (/^\d{0,3}$/.test(value)) {
-            setNewAdminData(prev => ({ ...prev, age: value }));
+    
+        const socket = socketRef.current;
+        if (!socket || socket.readyState !== WebSocket.OPEN) {
+            console.warn("WebSocket not connected.");
         }
+    
+        console.log("Form data being sent:", formData);
+    
+        socket.send("[Update_User] " + JSON.stringify({
+            userId: selectedUser.id,
+            updatedData: {
+                email: formData.email,
+                firstName: formData.firstName,
+                middleName: formData.middleName,
+                lastName: formData.lastName,
+                birthday: formData.birthday, 
+                age: formData.age, 
+                gender: formData.gender, 
+                contactNumber: formData.contactNumber, 
+                address: formData.address
+            }
+        }));
+    
+        setIsModalOpen(false);
     };
-
-    const handleContactInput = (e) => {
-        const { value } = e.target;
-        if (/^\d{0,11}$/.test(value)) { 
-            setNewAdminData(prev => ({ ...prev, contactNumber: value }));  
+    const handleDelete = (userId) => {
+        const socket = socketRef.current;
+        if (!socket || socket.readyState !== WebSocket.OPEN) {
+            console.warn("WebSocket not ready");
         }
+    
+        const message = `[Delete_User] ${JSON.stringify({ userId: userId })}`;
+        socket.send(message);
     };
+    
+    
 
     return (
-        <div className="flex justify-center items-center min-h-screen bg-gray-100 p-6">
-            <div className="bg-white shadow-lg rounded-lg p-6 max-w-6xl w-full">
-                <h1 className="text-2xl font-bold text-gray-800 mb-4 text-center">
-                    Admin Panel - User Management
-                </h1>
-                <div className="mb-4">
-                    <input
-                        type="text"
-                        placeholder="Search by email or name..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)} // This will trigger search as the user types
-                        className="p-2 w-full border border-gray-300 rounded"
-                    />
-                </div>
-                <div className="overflow-x-auto">
-                    <table className="min-w-full bg-white border border-gray-300">
+        <div className="min-h-screen bg-gray-100 p-6">
+            <div className="bg-white shadow-lg rounded-lg p-6 max-w-6xl mx-auto w-full">
+                <h1 className="text-2xl font-bold text-center mb-4">User Panel - User Management</h1>
+    
+                <input
+                    type="text"
+                    placeholder="Search Users"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full p-2 border mb-4"
+                />
+    
+                <div className="w-full overflow-x-auto">
+                    <table className="table-auto min-w-[1200px] border border-collapse">
                         <thead>
-                            <tr className="bg-gray-200">
-                                <th className="py-2 px-4 border">ID</th>
+                            <tr className="bg-gray-200 whitespace-nowrap">
                                 <th className="py-2 px-4 border">First Name</th>
                                 <th className="py-2 px-4 border">Middle Name</th>
                                 <th className="py-2 px-4 border">Last Name</th>
                                 <th className="py-2 px-4 border">Email</th>
+                                <th className="py-2 px-4 border">Address</th>
+                                <th className="py-2 px-4 border">Gender</th>
                                 <th className="py-2 px-4 border">Birthday</th>
                                 <th className="py-2 px-4 border">Age</th>
-                                <th className="py-2 px-4 border">Gender</th>
-                                <th className="py-2 px-4 border">Contact</th>
-                                <th className="py-2 px-4 border">Created At</th>
-                                <th className="py-2 px-4 border">Updated At</th>
+                                <th className="py-2 px-4 border">Contact No.</th>
                                 <th className="py-2 px-4 border">Status</th>
                                 <th className="py-2 px-4 border">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {filteredUsers.map((user, index) => (
-                                <tr key={user.id || user.email || index} className="border-t">
-                                    <td className="py-2 px-4 border">{user.id}</td>
+                            {filteredUsers.map((user) => (
+                                <tr key={user.id || user.email} className="whitespace-nowrap">
                                     <td className="py-2 px-4 border">{user.firstName}</td>
                                     <td className="py-2 px-4 border">{user.middleName}</td>
                                     <td className="py-2 px-4 border">{user.lastName}</td>
                                     <td className="py-2 px-4 border">{user.email}</td>
+                                    <td className="py-2 px-4 border">{user.address}</td>
+                                    <td className="py-2 px-4 border">{user.gender}</td>
                                     <td className="py-2 px-4 border">{user.birthday}</td>
                                     <td className="py-2 px-4 border">{user.age}</td>
-                                    <td className="py-2 px-4 border">{user.gender}</td>
                                     <td className="py-2 px-4 border">{user.contactNumber}</td>
-                                    <td className="py-2 px-4 border">{user.createdAt}</td>
-                                    <td className="py-2 px-4 border">{user.updatedAt}</td>
-                                    <td className="py-2 px-4 border">{user.status}</td>
+                                    <td className="py-2 px-4 border">{user.enabled ? "Active" : "Banned"}</td>
                                     <td className="py-2 px-4 border">
-                                        <div className="flex flex-row gap-1.5">
-                                            <button className="px-4 py-1 rounded bg-red-500 text-white" onClick={() => handleBan(user.email, user.status === "banned")}>
-                                                {user.status === "banned" ? "Unban" : "Ban"}
+                                        <div className="flex gap-1 whitespace-nowrap">
+                                            <button
+                                                className={`px-2 py-1 rounded text-white ${user.enabled ? "bg-red-500" : "bg-green-500"}`}
+                                                onClick={() => handleBan(user.id)}
+                                            >
+                                                {user.enabled ? "Ban" : "Unban"}
                                             </button>
-                                            <button className="px-4 py-1 rounded bg-blue-500 text-white" onClick={() => handleEdit(user.email)}>
+                                            <button
+                                                className="px-2 py-1 rounded bg-blue-500 text-white"
+                                                onClick={() => handleEdit(user.id)}
+                                            >
                                                 Edit
                                             </button>
-                                            <button className="px-4 py-1 rounded bg-yellow-500 text-white" onClick={() => handleDelete(user.email)}>
+                                            <button
+                                                className="px-2 py-1 rounded bg-yellow-500 text-white"
+                                                onClick={() => handleDelete(user.id)}
+                                            >
                                                 Delete
                                             </button>
                                         </div>
@@ -261,115 +377,247 @@ function UserList() {
                                 </tr>
                             ))}
                         </tbody>
-
                     </table>
                 </div>
-                <div className="mt-4 text-center">
-                    <div className="inline-flex space-x-4">
-                        <button
-                            className="px-6 py-2 rounded bg-purple-500 text-white"
-                            onClick={handleRegister}
-                        >
-                            Register New User
-                        </button>
-                    </div>
+    
+                <div className="text-center mt-4">
+                    <button
+                        className="px-6 py-2 rounded bg-purple-500 text-white"
+                        onClick={() => setIsRegisterModalOpen(true)}
+                    >
+                        Register New User
+                    </button>
                 </div>
             </div>
-
-            {/* Modal - Register/Edit User */}
+    
+            {/* Edit Modal */}
             {isModalOpen && (
-                <div className="fixed inset-0 flex justify-center items-center z-50">
-                    <div className="bg-white p-6 rounded-lg w-96">
-                        <h2 className="text-xl font-semibold mb-4">
-                            {modalType === "edit" ? "Edit User" : "Register New User"}
-                        </h2>
-                        <div className="space-y-4">
-                            {modalType === "edit" ? (
-                                <>
-                                    <input
-                                        type="text"
-                                        name="firstName"
-                                        value={formData.firstName}
-                                        onChange={handleChange}
-                                        className="w-full p-2 border border-gray-300 rounded"
-                                        placeholder="First Name"
-                                    />
-                                    <input
-                                        type="text"
-                                        name="middleName"
-                                        value={formData.middleName}
-                                        onChange={handleChange}
-                                        className="w-full p-2 border border-gray-300 rounded"
-                                        placeholder="Middle Name"
-                                    />
-                                    <input
-                                        type="text"
-                                        name="lastName"
-                                        value={formData.lastName}
-                                        onChange={handleChange}
-                                        className="w-full p-2 border border-gray-300 rounded"
-                                        placeholder="Last Name"
-                                    />
-                                    <input
-                                        type="email"
-                                        name="email"
-                                        value={formData.email}
-                                        readOnly
-                                        className="w-full p-2 border border-gray-300 rounded"
-                                        placeholder="Email"
-                                    />
-                                </>
+                <div
+                    className="fixed inset-0 flex justify-center items-center z-50"
+                    style={{ backgroundColor: 'rgba(0, 0, 0, 0.9)' }}
+                >
+                    <div className="bg-white p-6 rounded-lg w-96 shadow-lg overflow-y-auto max-h-[90vh]">
+                        <h2 className="text-xl font-semibold mb-4">Edit Admin</h2>
+                        <form onSubmit={handleSave} className="grid grid-cols-1 gap-4">
+                            {[
+                                "firstName",
+                                "middleName",
+                                "lastName",
+                                "email",
+                                "address",
+                                "gender",
+                                "birthday",
+                                "age",
+                                "contactNumber",
+                            ].map((field) => (
+                                <label key={field} className="block">
+
+                                    {field === "gender" ? (
+                                        <select
+                                            name={field}
+                                            value={formData[field]}
+                                            onChange={handleChange}
+                                            className="w-full p-2 border rounded mt-1"
+                                            required
+                                        >
+                                            <option value="">Select Gender</option>
+                                            <option value="Male">Male</option>
+                                            <option value="Female">Female</option>
+                                        </select>
+                                    ) : (
+                                        <input
+                                            type={
+                                                field === "email"
+                                                    ? "email"
+                                                    : field === "age" ||
+                                                    field === "contactNumber"
+                                                    ? "tel"
+                                                    : "text"
+                                            }
+                                            name={field}
+                                            value={formData[field]}
+                                            onChange={
+                                                field === "age"
+                                                    ? handleEditAgeInput
+                                                    : field === "contactNumber"
+                                                    ? handleEditContactInput
+                                                    : handleChange
+                                            }
+                                            className="w-full p-2 border rounded mt-1"
+                                            required={field !== "middleName"}
+                                            pattern={
+                                                field === "email"
+                                                    ? "^[\\w.+\\-]+@gmail\\.com$"
+                                                    : field === "contactNumber"
+                                                    ? "09\\d{9}"
+                                                    : field === "age"
+                                                    ? "\\d{1,3}"
+                                                    : undefined
+                                            }
+                                            maxLength={
+                                                field === "contactNumber"
+                                                    ? 11
+                                                    : field === "age"
+                                                    ? 3
+                                                    : undefined
+                                            }
+                                            title={
+                                                field === "email"
+                                                    ? "Only Gmail addresses are allowed."
+                                                    : field === "contactNumber"
+                                                    ? "Must start with '09' and be exactly 11 digits"
+                                                    : field === "age"
+                                                    ? "Up to 3-digit number only"
+                                                    : undefined
+                                            }
+                                        />
+                                    )}
+                                </label>
+                            ))}
+
+                            <div className="col-span-full flex justify-between mt-4">
+                                <button
+                                    type="button"
+                                    className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
+                                    onClick={handleCloseModal}
+                                >
+                                    Close
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                                >
+                                    Save
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+    
+            
+            {isRegisterModalOpen && (
+                <div
+                    className="fixed inset-0 flex justify-center items-center z-50"
+                    style={{ backgroundColor: 'rgba(0, 0, 0, 0.9)' }}
+                >
+                    <div className="bg-white p-6 rounded-lg w-96 shadow-lg overflow-y-auto max-h-[90vh]">
+                    <h2 className="text-xl font-semibold mb-4 text-center">Register New User</h2>
+                    <form onSubmit={handleRegisterUser}>
+                        {[
+                        "firstName",
+                        "middleName",
+                        "lastName",
+                        "email",
+                        "address",
+                        "gender",
+                        "age",
+                        "contactNumber",
+                        "birthday" // Add birthday here
+                        ].map((field) => {
+                        const label =
+                            field === "gender"
+                            ? "Gender"
+                            : field === "birthday"
+                            ? "Birthday" // Label for the new birthday field
+                            : field.replace(/([A-Z])/g, " $1").replace(/^./, (str) => str.toUpperCase());
+
+                        let inputType = "text";
+                        if (field === "email") inputType = "email";
+                        else if (field === "age" || field === "contactNumber") inputType = "tel";
+
+                        return (
+                            <div key={field} className="mb-4">
+                            <label className="block mb-1 capitalize" htmlFor={field}>
+                                {label}
+                            </label>
+                            {field === "gender" ? (
+                                <select
+                                id={field}
+                                name={field}
+                                value={newUserData[field]}
+                                onChange={handleNewUserChange}
+                                className="w-full p-2 border rounded"
+                                required
+                                >
+                                <option value="" disabled>Select Gender</option>
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                                <option value="Other">Other</option>
+                                </select>
+                            ) : field === "birthday" ? (
+                                <input
+                                id={field}
+                                type={inputType}
+                                name={field}
+                                value={newUserData[field]} // Handle birthday change
+                                onChange={handleNewUserChange}
+                                placeholder="e.g., June 1, 2005"
+                                className="w-full p-2 border rounded"
+                                required
+                                />
                             ) : (
-                                <>
-                                    <input
-                                        type="text"
-                                        name="firstName"
-                                        value={newAdminData.firstName}
-                                        onChange={handleNewAdminChange}
-                                        className="w-full p-2 border border-gray-300 rounded"
-                                        placeholder="First Name"
-                                    />
-                                    <input
-                                        type="text"
-                                        name="middleName"
-                                        value={newAdminData.middleName}
-                                        onChange={handleNewAdminChange}
-                                        className="w-full p-2 border border-gray-300 rounded"
-                                        placeholder="Middle Name"
-                                    />
-                                    <input
-                                        type="text"
-                                        name="lastName"
-                                        value={newAdminData.lastName}
-                                        onChange={handleNewAdminChange}
-                                        className="w-full p-2 border border-gray-300 rounded"
-                                        placeholder="Last Name"
-                                    />
-                                    <input
-                                        type="email"
-                                        name="email"
-                                        value={newAdminData.email}
-                                        onChange={handleNewAdminChange}
-                                        className="w-full p-2 border border-gray-300 rounded"
-                                        placeholder="Email"
-                                    />
-                                </>
+                                <input
+                                id={field}
+                                type={inputType}
+                                name={field}
+                                value={newUserData[field]}
+                                onChange={
+                                    field === "age"
+                                    ? handleAgeInput
+                                    : field === "contactNumber"
+                                    ? handleContactInput
+                                    : handleNewUserChange
+                                }
+                                onKeyDown={
+                                    field === "age" || field === "contactNumber" ? handleNumericKeyDown : undefined
+                                }
+                                className="w-full p-2 border rounded"
+                                required={field !== "middleName"}
+                                maxLength={field === "contactNumber" ? 11 : field === "age" ? 3 : undefined}
+                                pattern={
+                                    field === "contactNumber"
+                                    ? "09\\d{9}"
+                                    : field === "age"
+                                    ? "\\d{1,3}"
+                                    : undefined
+                                }
+                                title={
+                                    field === "contactNumber"
+                                    ? "Must start with '09' and be exactly 11 digits"
+                                    : field === "age"
+                                    ? "Up to 3-digit number only"
+                                    : undefined
+                                }
+                                />
                             )}
+                            </div>
+                        );
+                        })}
+
+                        {emailError && (
+                        <p className="text-red-500 text-sm mt-2 text-center">{emailError}</p>
+                        )}
+
+                        <div className="flex justify-between mt-6">
+                        <button
+                            type="button"
+                            className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
+                            onClick={() => {
+                            setEmailError("");
+                            setIsRegisterModalOpen(false);
+                            }}
+                        >
+                            Close
+                        </button>
+                        <button
+                            type="submit"
+                            className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+                        >
+                            Register
+                        </button>
                         </div>
-                        <div className="flex justify-end space-x-4 mt-4">
-                            <button
-                                onClick={handleCloseModal}
-                                className="px-4 py-2 bg-gray-500 text-white rounded"
-                            >
-                                Close
-                            </button>
-                            <button
-                                onClick={modalType === "edit" ? handleSave : handleRegisterAdmin}
-                                className="px-4 py-2 bg-purple-500 text-white rounded"
-                            >
-                                {modalType === "edit" ? "Save" : "Register"}
-                            </button>
-                        </div>
+                    </form>
                     </div>
                 </div>
             )}

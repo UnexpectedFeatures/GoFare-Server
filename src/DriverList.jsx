@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import WebSocketAdminClient from "./WebsocketAdminRepository";
 
-function ModList() {
+function DriverList() {
     const socketRef = useRef(null);
     const [emailError, setEmailError] = useState("");
     const [drivers, setDrivers] = useState([]);
@@ -11,7 +11,15 @@ function ModList() {
         email: "",
         firstName: "",
         middleName: "",
-        lastName: ""
+        lastName: "",
+        address: "",
+        gender: "",
+        birthday: "",
+        age: "",
+        contactNumber: "",
+        vehicleType: "",
+        driverNo: "",
+
     });
     const [isSocketReady, setIsSocketReady] = useState(false);
     const [selectedDriver, setSelectedDriver] = useState(null);
@@ -21,7 +29,13 @@ function ModList() {
         middleName: "",
         lastName: "",
         email: "",
-        role: "driver"
+        address: "",
+        gender: "",
+        birthday: "",
+        age: "",
+        contactNumber: "",
+        vehicleType: "",
+        driverNo: "",
     });
     const [searchTerm, setSearchTerm] = useState("");
 
@@ -95,28 +109,55 @@ function ModList() {
         if (searchTerm === "") {
             setFilteredDrivers(drivers);
         } else {
+            const lowerSearch = searchTerm.toLowerCase();
+    
             const filtered = drivers.filter(driver =>
-                driver.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                driver.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                driver.lastName?.toLowerCase().includes(searchTerm.toLowerCase())
+                (driver.id?.toLowerCase() || "").includes(lowerSearch) ||
+                (driver.firstName?.toLowerCase() || "").includes(lowerSearch) ||
+                (driver.lastName?.toLowerCase() || "").includes(lowerSearch) ||
+                (driver.email?.toLowerCase() || "").includes(lowerSearch) ||
+                (driver.address?.toLowerCase() || "").includes(lowerSearch) ||
+                (driver.gender?.toLowerCase() || "").includes(lowerSearch) ||
+                (driver.birthday?.toLowerCase() || "").includes(lowerSearch) ||
+                (driver.age?.toString().toLowerCase() || "").includes(lowerSearch) ||
+                (driver.contactNumber?.toLowerCase() || "").includes(lowerSearch) ||
+                (driver.vehicleType?.toLowerCase() || "").includes(lowerSearch) ||
+                (driver.driverNo?.toString().toLowerCase() || "").includes(lowerSearch)
             );
+                  
             setFilteredDrivers(filtered);
         }
     }, [drivers, searchTerm]);
+    
 
-    const handleAgeInput = (e) => {
+    const handleEditAgeInput = (e) => {
         const { value } = e.target;
         if (/^\d{0,3}$/.test(value)) {
-            setNewAdminData(prev => ({ ...prev, age: value }));
+            setFormData((prev) => ({ ...prev, age: value }));
         }
     };
-
+    
+    const handleEditContactInput = (e) => {
+        const { value } = e.target;
+        if (/^\d{0,11}$/.test(value)) {
+            setFormData((prev) => ({ ...prev, contactNumber: value }));
+        }
+    };
+    
+    const handleAgeInput = (e) => {
+        const { value } = e.target;
+        if (/^\d{0,3}$/.test(value)) { // Allows a number with 1-3 digits (0-999)
+            setNewDriverData(prev => ({ ...prev, age: value }));
+        }
+    };
+    
     const handleContactInput = (e) => {
         const { value } = e.target;
-        if (/^\d{0,11}$/.test(value)) { 
-            setNewAdminData(prev => ({ ...prev, contactNumber: value }));  
+        if (/^\d{0,11}$/.test(value)) { // Ensures the input is up to 11 digits
+            setNewDriverData(prev => ({ ...prev, contactNumber: value }));
         }
     };
+    
     
     const handleBan = (driver) => {
         const updatedDriver = {
@@ -143,35 +184,69 @@ function ModList() {
                 email: driver.email,
                 firstName: driver.firstName,
                 middleName: driver.middleName,
-                lastName: driver.lastName
+                lastName: driver.lastName,
+                address: driver.address,
+                gender: driver.gender,
+                birthday: driver.birthday,
+                age: driver.age,
+                contactNumber: driver.contactNumber,
+                vehicleType: driver.vehicleType,
+                driverNo: driver.driverNo,
             });
             setIsModalOpen(true);
+        }
+    };
+
+    const handleNumericKeyDown = (e) => {
+        // Allow: backspace, delete, arrows, tab
+        const allowedKeys = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'];
+        if (
+            !/[0-9]/.test(e.key) && 
+            !allowedKeys.includes(e.key)
+        ) {
+            e.preventDefault();
         }
     };
 
     const handleRegisterDriver = (e) => {
         e.preventDefault();
     
-        const email = newDriverData.email;
-        const gmailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
+        const { email, contactNumber, age } = newDriverData;
     
+        // Email validation: only gmail allowed
+        const gmailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
         if (!gmailRegex.test(email)) {
             setEmailError("Only @gmail.com emails are allowed.");
             return;
         }
     
-        setEmailError(""); // clear error if valid
-    
-        const socket = socketRef.current;
-        const message = `[Insert_Driver] ${JSON.stringify({ data: newDriverData })}`;
-    
-        if (!socket || socket.readyState !== WebSocket.OPEN) {
-            console.warn("WebSocket not connected.");
+        const contactRegex = /^09\d{9}$/; // Only allows '09' followed by 9 digits, total 11 numbers
+        if (!contactRegex.test(contactNumber)) {
+            setEmailError("Contact number must start with '09' and be exactly 11 digits.");
+            return;
         }
     
+        const ageRegex = /^\d{1,3}$/; // Only allows 1 to 3 digits, no letters or symbols
+        if (!ageRegex.test(age)) {
+            setEmailError("Age must be a numeric value with up to 3 digits.");
+            return;
+        }
+    
+        setEmailError(""); // Clear all errors if everything is valid
+    
+        // Ensure WebSocket is connected before sending
+        const socket = socketRef.current;
+        if (!socket || socket.readyState !== WebSocket.OPEN) {
+            console.error("WebSocket not connected.");
+        }
+    
+        // Sending message to WebSocket
+        const message = `[Insert_Driver] ${JSON.stringify({ data: newDriverData })}`;
         socket.send(message);
         setIsRegisterModalOpen(false);
     };
+    
+    
     
 
     const handleChange = (e) => {
@@ -186,7 +261,7 @@ function ModList() {
 
     const handleCloseModal = () => {
         setIsModalOpen(false);
-        setFormData({ id: "", email: "", firstName: "", middleName: "", lastName: "" });
+        setFormData({ id: "", email: "", firstName: "", middleName: "", lastName: "", birthday: "", age: "", gender: "", address: "", contactNumber: "", vehicleType: "", driverNo: "" });
     };
 
     const handleSave = (e) => {
@@ -218,6 +293,13 @@ function ModList() {
                 firstName: formData.firstName,
                 middleName: formData.middleName,
                 lastName: formData.lastName,
+                birthday: formData.birthday,
+                age: formData.age,
+                gender: formData.gender,
+                address: formData.address,
+                contactNumber: formData.contactNumber,
+                vehicleType: formData.vehicleType,
+                driverNo: formData.driverNo
             }
         }));
 
@@ -248,34 +330,46 @@ function ModList() {
                 />
 
                 <div className="w-full overflow-x-auto">
-                    <table className="table-auto min-w-[1000px] border border-collapse">
+                    <table className="table-auto min-w-[1200px] border border-collapse">
                         <thead>
                             <tr className="bg-gray-200 whitespace-nowrap">
                                 <th className="py-2 px-4 border">ID</th>
-                                <th className="py-2 px-4 border">First</th>
-                                <th className="py-2 px-4 border">Middle</th>
-                                <th className="py-2 px-4 border">Last</th>
+                                <th className="py-2 px-4 border">Driver No</th>
+                                <th className="py-2 px-4 border">First Name</th>
+                                <th className="py-2 px-4 border">Middle Name</th>
+                                <th className="py-2 px-4 border">Last Name</th>
                                 <th className="py-2 px-4 border">Email</th>
-                                <th className="py-2 px-4 border">Role</th>
+                                <th className="py-2 px-4 border">Address</th>
+                                <th className="py-2 px-4 border">Gender</th>
+                                <th className="py-2 px-4 border">Birthday</th>
+                                <th className="py-2 px-4 border">Age</th>
+                                <th className="py-2 px-4 border">Contact No.</th>
+                                <th className="py-2 px-4 border">Vehicle Type</th>
                                 <th className="py-2 px-4 border">Status</th>
                                 <th className="py-2 px-4 border">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             {filteredDrivers.map((driver, index) => (
-                                <tr key={driver.id || driver.email || index} className="whitespace-nowrap">
+                                <tr key={driver.driverNo || driver.email || index} className="whitespace-nowrap">
                                     <td className="py-2 px-4 border">{driver.id}</td>
+                                    <td className="py-2 px-4 border">{driver.driverNo}</td>
                                     <td className="py-2 px-4 border">{driver.firstName}</td>
                                     <td className="py-2 px-4 border">{driver.middleName}</td>
                                     <td className="py-2 px-4 border">{driver.lastName}</td>
                                     <td className="py-2 px-4 border">{driver.email}</td>
-                                    <td className="py-2 px-4 border">{driver.adminLevel}</td>
-                                    <td className="py-2 px-4 border">{driver.enabled ? "active" : "banned"}</td>
+                                    <td className="py-2 px-4 border">{driver.address}</td>
+                                    <td className="py-2 px-4 border">{driver.gender}</td>
+                                    <td className="py-2 px-4 border">{driver.birthday}</td>
+                                    <td className="py-2 px-4 border">{driver.age}</td>
+                                    <td className="py-2 px-4 border">{driver.contactNumber}</td>
+                                    <td className="py-2 px-4 border">{driver.vehicleType}</td>
+                                    <td className="py-2 px-4 border">{driver.enabled ? "Active" : "Banned"}</td>
                                     <td className="py-2 px-4 border">
                                         <div className="flex gap-1 whitespace-nowrap">
                                             <button
                                                 className={`px-2 py-1 rounded text-white ${driver.enabled ? "bg-red-500" : "bg-green-500"}`}
-                                                onClick={() => handleBan(driver)}
+                                                onClick={() => handleBan(driver.id)}
                                             >
                                                 {driver.enabled ? "Ban" : "Unban"}
                                             </button>
@@ -298,6 +392,7 @@ function ModList() {
                         </tbody>
                     </table>
                 </div>
+
 
                 <div className="text-center mt-4">
                     <button
@@ -351,64 +446,278 @@ function ModList() {
                 </div>
             )}
 
+            
+            {isModalOpen && (
+                <div
+                    className="fixed inset-0 flex justify-center items-center z-50"
+                    style={{ backgroundColor: 'rgba(0, 0, 0, 0.9)' }}
+                >
+                    <div className="bg-white p-6 rounded-lg w-96 shadow-lg overflow-y-auto max-h-[90vh]">
+                        <h2 className="text-xl font-semibold mb-4">Edit Admin</h2>
+                        <form onSubmit={handleSave} className="grid grid-cols-1 gap-4">
+                            {[
+                                "firstName",
+                                "middleName",
+                                "lastName",
+                                "email",
+                                "address",
+                                "gender",
+                                "birthday",
+                                "age",
+                                "contactNumber",
+                                "vehicleType",
+                                "driverNo"
+                            ].map((field) => (
+                                <label key={field} className="block">
+                                    <span className="capitalize">
+                                        {field === "driverNo"
+                                            ? "Driver Number"
+                                            : field.replace(/([A-Z])/g, " $1")}
+                                    </span>
+
+                                    {field === "gender" ? (
+                                        <select
+                                            name={field}
+                                            value={formData[field]}
+                                            onChange={handleChange}
+                                            className="w-full p-2 border rounded mt-1"
+                                            required
+                                        >
+                                            <option value="">Select Gender</option>
+                                            <option value="Male">Male</option>
+                                            <option value="Female">Female</option>
+                                        </select>
+                                    ) : field === "vehicleType" ? (
+                                        <select
+                                            name={field}
+                                            value={formData[field]}
+                                            onChange={handleChange}
+                                            className="w-full p-2 border rounded mt-1"
+                                            required
+                                        >
+                                            <option value="">Select Vehicle Type</option>
+                                            <option value="Jeep">Jeep</option>
+                                            <option value="Bus">Bus</option>
+                                            <option value="Train">Train</option>
+                                        </select>
+                                    ) : (
+                                        <input
+                                            type={
+                                                field === "email"
+                                                    ? "email"
+                                                    : field === "age" ||
+                                                    field === "contactNumber" ||
+                                                    field === "driverNo"
+                                                    ? "tel"
+                                                    : "text"
+                                            }
+                                            name={field}
+                                            value={formData[field]}
+                                            onChange={
+                                                field === "age"
+                                                    ? handleEditAgeInput
+                                                    : field === "contactNumber"
+                                                    ? handleEditContactInput
+                                                    : handleChange
+                                            }
+                                            className="w-full p-2 border rounded mt-1"
+                                            required={field !== "middleName"}
+                                            pattern={
+                                                field === "email"
+                                                    ? "^[\\w.+\\-]+@gmail\\.com$"
+                                                    : field === "contactNumber"
+                                                    ? "09\\d{9}"
+                                                    : field === "age"
+                                                    ? "\\d{1,3}"
+                                                    : undefined
+                                            }
+                                            maxLength={
+                                                field === "contactNumber"
+                                                    ? 11
+                                                    : field === "age"
+                                                    ? 3
+                                                    : undefined
+                                            }
+                                            title={
+                                                field === "email"
+                                                    ? "Only Gmail addresses are allowed."
+                                                    : field === "contactNumber"
+                                                    ? "Must start with '09' and be exactly 11 digits"
+                                                    : field === "age"
+                                                    ? "Up to 3-digit number only"
+                                                    : undefined
+                                            }
+                                        />
+                                    )}
+                                </label>
+                            ))}
+
+                            <div className="col-span-full flex justify-between mt-4">
+                                <button
+                                    type="button"
+                                    className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
+                                    onClick={handleCloseModal}
+                                >
+                                    Close
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                                >
+                                    Save
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+
             {/* Register Modal */}
             {isRegisterModalOpen && (
                 <div
                     className="fixed inset-0 flex justify-center items-center z-50"
                     style={{ backgroundColor: 'rgba(0, 0, 0, 0.9)' }}
                 >
-                    <div className="bg-white p-6 rounded-lg w-96 shadow-lg">
-                        <h2 className="text-xl font-semibold mb-4">Register New Driver</h2>
-                        <form onSubmit={handleRegisterDriver}>
-                            {/* Your input fields here */}
+                    <div className="bg-white p-6 rounded-lg w-96 shadow-lg overflow-y-auto max-h-[90vh]">
+                    <h2 className="text-xl font-semibold mb-4 text-center">Register New Driver</h2>
+                    <form onSubmit={handleRegisterDriver}>
+                        {[
+                        "firstName",
+                        "middleName",
+                        "lastName",
+                        "email",
+                        "address",
+                        "gender",
+                        "age",
+                        "contactNumber",
+                        "vehicleType",
+                        "driverNo",
+                        "birthday" // Add birthday here
+                        ].map((field) => {
+                        const label =
+                            field === "driverNo"
+                            ? "Driver Number"
+                            : field === "gender"
+                            ? "Gender"
+                            : field === "birthday"
+                            ? "Birthday" // Label for the new birthday field
+                            : field.replace(/([A-Z])/g, " $1").replace(/^./, (str) => str.toUpperCase());
 
-                            {["firstName", "middleName", "lastName", "email"].map((field) => (
-                                <div key={field} className="mb-4">
-                                    <label className="block mb-1 capitalize" htmlFor={field}>
-                                        {field}
-                                    </label>
-                                    <input
-                                        id={field}
-                                        type={field === "email" ? "email" : "text"}
-                                        name={field}
-                                        value={newDriverData[field]}
-                                        onChange={handleNewDriverChange}
-                                        className="w-full p-2 border rounded"
-                                        required={field !== "middleName"}
-                                    />
-                                </div>
-                            ))}
+                        let inputType = "text";
+                        if (field === "email") inputType = "email";
+                        else if (field === "age" || field === "contactNumber") inputType = "tel";
 
-                            {emailError && (
-                                <p className="text-red-500 text-sm mt-2 text-center">{emailError}</p>
+                        return (
+                            <div key={field} className="mb-4">
+                            <label className="block mb-1 capitalize" htmlFor={field}>
+                                {label}
+                            </label>
+                            {field === "gender" ? (
+                                <select
+                                id={field}
+                                name={field}
+                                value={newDriverData[field]}
+                                onChange={handleNewDriverChange}
+                                className="w-full p-2 border rounded"
+                                required
+                                >
+                                <option value="" disabled>Select Gender</option>
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                                <option value="Other">Other</option>
+                                </select>
+                            ) : field === "vehicleType" ? (
+                                <select
+                                name={field}
+                                value={newDriverData[field]} // Ensure you're passing correct value to the database
+                                onChange={handleNewDriverChange} // Handle the change
+                                className="w-full p-2 border rounded mt-1"
+                                required
+                                >
+                                <option value="">Select Vehicle Type</option>
+                                <option value="Jeep">Jeep</option>
+                                <option value="Bus">Bus</option>
+                                <option value="Train">Train</option>
+                                </select>
+                            ) : field === "birthday" ? (
+                                <input
+                                id={field}
+                                type={inputType}
+                                name={field}
+                                value={newDriverData[field]} // Handle birthday change
+                                onChange={handleNewDriverChange}
+                                placeholder="e.g., June 1, 2005"
+                                className="w-full p-2 border rounded"
+                                required
+                                />
+                            ) : (
+                                <input
+                                id={field}
+                                type={inputType}
+                                name={field}
+                                value={newDriverData[field]}
+                                onChange={
+                                    field === "age"
+                                    ? handleAgeInput
+                                    : field === "contactNumber"
+                                    ? handleContactInput
+                                    : handleNewDriverChange
+                                }
+                                onKeyDown={
+                                    field === "age" || field === "contactNumber" ? handleNumericKeyDown : undefined
+                                }
+                                className="w-full p-2 border rounded"
+                                required={field !== "middleName"}
+                                maxLength={field === "contactNumber" ? 11 : field === "age" ? 3 : undefined}
+                                pattern={
+                                    field === "contactNumber"
+                                    ? "09\\d{9}"
+                                    : field === "age"
+                                    ? "\\d{1,3}"
+                                    : undefined
+                                }
+                                title={
+                                    field === "contactNumber"
+                                    ? "Must start with '09' and be exactly 11 digits"
+                                    : field === "age"
+                                    ? "Up to 3-digit number only"
+                                    : undefined
+                                }
+                                />
                             )}
-
-                            <div className="flex justify-between mt-6">
-                                <button
-                                    type="button"
-                                    className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
-                                    onClick={() => {
-                                        setEmailError("");
-                                        setIsRegisterModalOpen(false);
-                                    }}
-                                >
-                                    Close
-                                </button>
-                                <button
-                                    type="submit"
-                                    className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
-                                >
-                                    Register
-                                </button>
                             </div>
-                        </form>
+                        );
+                        })}
 
+                        {emailError && (
+                        <p className="text-red-500 text-sm mt-2 text-center">{emailError}</p>
+                        )}
+
+                        <div className="flex justify-between mt-6">
+                        <button
+                            type="button"
+                            className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
+                            onClick={() => {
+                            setEmailError("");
+                            setIsRegisterModalOpen(false);
+                            }}
+                        >
+                            Close
+                        </button>
+                        <button
+                            type="submit"
+                            className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+                        >
+                            Register
+                        </button>
+                        </div>
+                    </form>
                     </div>
                 </div>
                 )}
-
         </div>
     );
 }
 
-export default ModList;
+export default DriverList;
