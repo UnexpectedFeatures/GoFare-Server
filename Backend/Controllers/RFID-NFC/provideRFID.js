@@ -6,7 +6,9 @@ export async function handleProvideRFID(ws, message) {
     const cleanedMessage = message.replace("[Provide_RFID] ", "");
     const parsed = JSON.parse(cleanedMessage);
 
-    const { userId, RFID } = parsed;
+    const { userId} = parsed;
+
+    const RFID = parsed.tag;
 
     if (!userId) {
       ws.send("[Provide_RFID_Response] Error: User ID is required");

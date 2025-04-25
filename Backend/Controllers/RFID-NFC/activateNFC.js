@@ -4,8 +4,11 @@ import transporter from "../../Services/mailSender.js";
 export async function handleActivateNFC(ws, message) {
   try {
     const cleanedMessage = message.replace("[Activate_NFC] ", "");
-    const userId = JSON.parse(cleanedMessage);
+    const parsed = JSON.parse(cleanedMessage);
 
+    const userId = parsed.userId;
+
+    console.log("User ID:", userId);
     if (!userId) {
       ws.send("[Activate_NFC_Response] Error: User ID is required");
       return;

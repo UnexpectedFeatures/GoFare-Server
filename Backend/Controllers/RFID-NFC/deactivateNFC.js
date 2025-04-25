@@ -4,7 +4,9 @@ import transporter from "../../Services/mailSender.js";
 export async function handleDeactivateNFC(ws, message) {
   try {
     const cleanedMessage = message.replace("[Deactivate_NFC] ", "");
-    const userId = JSON.parse(cleanedMessage);
+    const parsed = JSON.parse(cleanedMessage);
+
+    const userId = parsed.userId;
 
     if (!userId) {
       ws.send("[Deactivate_NFC_Response] Error: User ID is required");

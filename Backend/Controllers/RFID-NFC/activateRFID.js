@@ -4,12 +4,18 @@ import transporter from "../../Services/mailSender.js";
 export async function handleActivateRFID(ws, message) {
   try {
     const cleanedMessage = message.replace("[Activate_RFID] ", "");
-    const userId = JSON.parse(cleanedMessage);
+    const parsed = JSON.parse(cleanedMessage);
+
+    const userId = parsed.userId;
+   
+    console.log("User ID:", userId);
 
     if (!userId) {
       ws.send("[Activate_RFID_Response] Error: User ID is required");
       return;
     }
+
+    console.log("Activating RFID for user:", userId);
 
     const firestore = admin.firestore();
 
@@ -22,6 +28,7 @@ export async function handleActivateRFID(ws, message) {
       );
       return;
     }
+    console.log("Activating RFID for user 2:", userId);
 
     const userRFIDRef = firestore.collection("UserRFID").doc(userId);
     const userRFIDSnapshot = await userRFIDRef.get();
@@ -30,13 +37,24 @@ export async function handleActivateRFID(ws, message) {
       ws.send(
         `[Activate_RFID_Response] Error: User ${userId} not found in RFID collection`
       );
+      console.log("User RFID not found:", userId);
       return;
     }
 
-    await userRFIDRef.update({
-      rfidActive: true,
-      lastActivation: admin.firestore.FieldValue.serverTimestamp(),
-    });
+ 
+    try{
+      await userRFIDRef.update({
+        rfidActive: true,
+        lastActivation: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      console.log("RFID activated successfully for user:", userId);
+  
+    }catch(error){  
+     console.error("Error updating RFID document:", error.message);  
+    }
+
+  
 
     const userData = userDocSnapshot.data();
     const firstName = userData.firstName || "";

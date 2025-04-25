@@ -6,7 +6,9 @@ export async function handleProvideNFC(ws, message) {
     const cleanedMessage = message.replace("[Provide_NFC] ", "");
     const parsed = JSON.parse(cleanedMessage);
 
-    const { userId, NFC } = parsed;
+    const { userId} = parsed;
+
+    const NFC = parsed.tag;
 
     if (!userId) {
       ws.send("[Provide_NFC_Response] Error: User ID is required");
