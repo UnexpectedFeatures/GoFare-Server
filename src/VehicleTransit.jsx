@@ -3,52 +3,49 @@ import WebSocketAdminClient from "./WebsocketAdminRepository";
 
 function VehicleTransit() {
     const socketRef = useRef(null);
-    const [trainData, setTrainData] = useState([]);  // Renamed for clarity
+    const [trainData, setTrainData] = useState([]);
 
-    // Handle WebSocket connection and message receiving
     useEffect(() => {
         const userSocket = new WebSocketAdminClient();
         socketRef.current = userSocket;
 
-        // Wait for the connection to be established
+        let intervalId;
+
         userSocket.readyPromise
             .then(() => {
                 console.log("WebSocket connected.");
-                userSocket.send("[Vehicle_Location]");  // Send message once connected
+
+                // Initial request
+                userSocket.send("[Vehicle_Location]");
+
+                // Repeat every 5 seconds
+                intervalId = setInterval(() => {
+                    userSocket.send("[Vehicle_Location]");
+                    console.log("Sent [Vehicle_Location] request");
+                }, 5000);
             })
             .catch((err) => {
                 console.error("WebSocket failed to connect:", err);
             });
 
-        // Handle incoming messages
         userSocket.onMessage((msg) => {
-            console.log("Received message:", msg);
-
-            if (msg.startsWith("[Vehicle_Location]")) {
-                const data = JSON.parse(msg.replace("[Vehicle_Location] ", ""));
-                console.log("Parsed data:", data);
+            if (msg.startsWith("[Train_Data]")) {
+                const jsonString = msg.replace("[Train_Data] ", "").trim();
+                const data = JSON.parse(jsonString);
 
                 if (data?.status === "SUCCESS" && data.data) {
-                    console.log("Data received:", data.data);
-
-                    // Check if data.data is an array, otherwise wrap it into an array
-                    const trainData = Array.isArray(data.data) ? data.data : [data.data];
-
-                    // Update the trainData state
-                    setTrainData(trainData);
-                    console.log("trainData updated:", trainData);  // Debugging log for state update
+                    const vehicles = Array.isArray(data.data) ? data.data : [data.data];
+                    setTrainData(vehicles);
                 } else {
-                    console.warn("No train data or unexpected format");
-                    setTrainData([]);  // Clear trainData if data is invalid
+                    setTrainData([]);
                 }
             }
         });
 
-        // Cleanup on unmount
         return () => {
+            clearInterval(intervalId); // Clear polling interval
             if (userSocket.readyState === WebSocket.OPEN) {
                 userSocket.close();
-                console.log("WebSocket closed.");
             }
         };
     }, []);
@@ -75,7 +72,7 @@ function VehicleTransit() {
                         </thead>
                         <tbody>
                             {trainData.length > 0 ? (
-                                trainData.map((train) => (
+                                trainData.map((train, index) => (
                                     <tr key={index} className="text-center">
                                         <td className="py-2 px-4 border">{train.displayDate || "—"}</td>
                                         <td className="py-2 px-4 border">{train.displayTime || "—"}</td>

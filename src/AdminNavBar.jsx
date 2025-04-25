@@ -10,7 +10,9 @@ function AdminTopBar() {
     const email = localStorage.getItem("userEmail") || "admin@example.com";
     const { setIsLoggedIn } = useContext(AuthContext);
     const [isNavOpen, setIsNavOpen] = useState(false);
-    const roles = localStorage.getItem("userRole")?.toLowerCase();
+    
+    // Ensure role is stored in lowercase for consistent comparison
+    const roles = (localStorage.getItem("userRole") || "").toLowerCase();  // Ensures the role is checked in lowercase
 
     const handleLogout = () => {
         console.log("User Role Before Logout:", localStorage.getItem("userRole"));
@@ -42,12 +44,10 @@ function AdminTopBar() {
 
                 <div className="ml-auto flex items-center space-x-4">
                     <div className="text-sm text-gray-300">
-                        <p className="font-medium">{username}</p>
                         <p className="text-xs">{email}</p>
                     </div>
                     <div className="text-sm text-gray-300">
-                        <p className="font-medium">{'\u00A0'}</p>
-                        <p className="font-medium">{roles}</p>
+                        <p className="font-medium">{roles.toUpperCase()}</p>
                     </div>
                 </div>
             </div>
@@ -57,13 +57,8 @@ function AdminTopBar() {
                 className={`fixed top-14 left-0 h-full bg-gray-800 text-white transition-all duration-300 ${isNavOpen ? "w-64 opacity-100 pointer-events-auto" : "w-0 opacity-0 pointer-events-none"}`}
             >
                 <div className="flex flex-col items-center pt-10 space-y-4">  
-                    <Link to="/admin-pannel" className="w-full">
-                        <button className="w-full cursor-pointer px-4 py-2 text-left hover:bg-gray-700">
-                            ⓘ {isNavOpen && "Admin Info"}
-                        </button>
-                    </Link>
 
-                    {roles === "Super Admin" && (
+                    {roles === "super admin" && (  // Ensure the role is compared in lowercase
                         <Link to="/create-mod" className="w-full">
                             <button className="w-full cursor-pointer px-4 py-2 text-left hover:bg-gray-700">
                                 👤 {isNavOpen && "Create Account"}
@@ -83,7 +78,7 @@ function AdminTopBar() {
                         </button>
                     </Link>
                     
-                    {roles === "Super Admin" && (
+                    {roles === "super admin" && (
                         <Link to="/mod-list" className="w-full">
                             <button className="w-full cursor-pointer px-4 py-2 text-left hover:bg-gray-700">
                                 🔹 {isNavOpen && "Moderator List"}
@@ -91,7 +86,7 @@ function AdminTopBar() {
                         </Link>
                     )}
 
-                    {roles === "Super Admin" && (
+                    {roles === "super admin" && (
                         <Link to="/admin-archive" className="w-full">
                             <button className="w-full cursor-pointer px-4 py-2 text-left hover:bg-gray-700">
                                 🔹 {isNavOpen && "Moderator Archive"}

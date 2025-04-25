@@ -158,18 +158,24 @@ function ModList() {
             return;
         }
     
+        if (!newAdminData.password) {
+            alert("Password is required.");
+            return;
+        }
+    
         setEmailError(""); // clear error if valid
     
         const socket = socketRef.current;
         const message = `[Insert_Admin] ${JSON.stringify({ data: newAdminData })}`;
     
-        if (!socket || socket.readyState !==    WebSocket.OPEN) {
+        if (!socket || socket.readyState !== WebSocket.OPEN) {
             console.warn("WebSocket not connected.");
         }
     
         socket.send(message);
         setIsRegisterModalOpen(false);
     };
+    
 
     const handleChange = (e) => {
         const { name, value } = e.target;

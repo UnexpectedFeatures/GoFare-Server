@@ -1,186 +1,131 @@
-import { useState, useContext, useEffect, useRef } from "react";
+import React, { useState, useRef, useContext, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
-import { AuthContext } from "./AuthContext";
-
-// Import the WebSocketAdminClient
-import WebSocketAdminClient from "./WebsocketAdminRepository";
+import WebSocketAdminClient from "./WebsocketAdminRepository"; // WebSocket client import
+import { AuthContext } from "./AuthContext"; // Import AuthContext
 
 function AdminLogin() {
-    const { setIsLoggedIn } = useContext(AuthContext);
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
-    const [errorMessage, setErrorMessage] = useState("");
-    const [successMessage, setSuccessMessage] = useState("");
-    const [isSocketReady, setIsSocketReady] = useState(false);
-    const [isLoading, setIsLoading] = useState(false); // New state for loading
-    const navigate = useNavigate();
+  const { setIsLoggedIn } = useContext(AuthContext); // To set login state globally
+  const navigate = useNavigate(); // Used for redirection
+  const socketRef = useRef(null); // Ref to manage WebSocket connection
+  const [email, setEmail] = useState(""); // State to store email
+  const [password, setPassword] = useState(""); // State to store password
+  const [error, setError] = useState(""); // State to store any error messages
+  const [isLoggedIn, setLoggedIn] = useState(false); // Track login status
 
-    // WebSocket connection setup using WebSocketAdminClient
-    const socketRef = useRef(null);  // <-- useRef to hold the socket reference
+  // Check if already logged in and redirect if necessary
+  useEffect(() => {
+    const token = localStorage.getItem("userToken");
+    const role = localStorage.getItem("userRole");
+    
+    if (token && role) {
+      navigate("/admin-pannel"); // Redirect to dashboard if logged in
+    }
+  }, [navigate]); // Only run this effect when the component mounts
 
-    useEffect(() => {
-        // Initialize the WebSocket connection using your custom WebSocketAdminClient
-        socketRef.current = new WebSocketAdminClient();
+  // Handle login action
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    
+    if (!email || !password) {
+      setError("Please enter both email and password.");
+      return;
+    }
 
-        socketRef.current.onopen = () => {
-            setIsSocketReady(true);
-            setIsLoading(false); // Stop loading once connected
-            console.log("WebSocket is connected.");
-        };
+    setError(""); // Reset any error messages
+    const socket = socketRef.current;
 
-        socketRef.current.onmessage = (e) => {
-            const response = JSON.parse(e.data.replace("[Login_Admin_Response]", "").trim());
+    // Send login request via WebSocket
+    const message = `[Login_Admin] ${JSON.stringify({ email, password })}`;
+    socket.send(message);
+  };
 
-            // Handle the login responses
-            switch (response.status) {
-                case "Success":
-                    localStorage.setItem("userToken", response.token);
-                    localStorage.setItem("userEmail", email);
-                    localStorage.setItem("userRole", response.adminLevel);
-                    setIsLoggedIn(true);
-                    setSuccessMessage("Login successful!");
-                    setTimeout(() => {
-                        navigate("/admin-pannel");
-                    }, 500);
-                    break;
-                case "Not_Found":
-                    setErrorMessage("Admin account not found.");
-                    break;
-                case "Account_Suspended":
-                    setErrorMessage("Your account has been suspended.");
-                    break;
-                case "Invalid_Password":
-                    setErrorMessage("Invalid password.");
-                    break;
-                default:
-                    setErrorMessage("Something went wrong, please try again.");
-                    break;
-            }
-        };
+  // Initialize WebSocket connection and handle login response
+  React.useEffect(() => {
+    const adminSocket = new WebSocketAdminClient();
+    socketRef.current = adminSocket;
 
-        socketRef.current.onerror = (error) => {
-            console.error("WebSocket error:", error);
-            setErrorMessage("WebSocket connection error.");
-        };
+    adminSocket.readyPromise.then(() => {
+      console.log("✅ WebSocket connected for login");
+    }).catch(err => {
+      console.error("WebSocket failed to connect:", err);
+    });
 
-        socketRef.current.onclose = () => {
-            setIsSocketReady(false);
-            setIsLoading(false); // Stop loading when WebSocket closes
-            console.log("WebSocket connection closed.");
-        };
+    adminSocket.onMessage((msg) => {
+      console.log("Received message:", msg);
 
-        return () => {
-            socketRef.current.close();
-        };
-    }, [email]);
+      if (msg.startsWith("[Login_Admin_Response]")) {
+        const response = msg.replace("[Login_Admin_Response]", "").trim();
+        const parsedResponse = JSON.parse(response);
 
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        setErrorMessage("");
-        setSuccessMessage("");
-
-        // Validate if fields are empty
-        if (!email || !password) {
-            setErrorMessage("Email and password cannot be empty.");
-            return;
-        }
-
-        // Validate if email ends with @gmail.com
-        if (!email.endsWith("@gmail.com")) {
-            setErrorMessage("Only @gmail.com emails are allowed.");
-            return;
-        }
-
-        // Send login request via WebSocket if the connection is ready
-        if (isSocketReady) {
-            setIsLoading(true); // Start loading when the request is sent
-            const loginPayload = JSON.stringify({ email, password });
-            socketRef.current.send(`[Login_Admin]${loginPayload}`);
+        if (parsedResponse.status === "Success") {
+          setLoggedIn(true); // Set login state to true
+          setIsLoggedIn(true); // Update global context state
+          localStorage.setItem("userToken", parsedResponse.token); // Store token in localStorage
+          localStorage.setItem("userRole", parsedResponse.adminLevel); // Store the admin's role (adminLevel) in localStorage
+          localStorage.setItem("username", parsedResponse.username); // Optionally store username
+          localStorage.setItem("userEmail", parsedResponse.email); // Optionally store email
+          
+          navigate("/admin-pannel"); // Redirect to admin panel
+          console.log("Login successful!", parsedResponse);
         } else {
-            setErrorMessage("WebSocket connection is not established.");
+          setError(parsedResponse.message || "Login failed");
         }
+      }
+    });
+
+    return () => {
+      adminSocket.close();
     };
+  }, []); // Initialize WebSocket connection only once
 
-    return (
-        <div className="h-[calc(100vh-100px)] flex items-center justify-center bg-gray-100 text-black">
-            <div className="relative w-96 p-8 bg-white shadow-lg rounded-lg">
-                <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-                    <h2 className="text-3xl font-semibold text-center text-gray-700 mb-6">Admin Login</h2>
-                </motion.div>
+  return (
+    <div className="min-h-screen bg-gray-100 p-6">
+      <div className="bg-white shadow-lg rounded-lg p-6 max-w-md mx-auto w-full">
+        <h1 className="text-2xl font-bold text-center mb-4">Admin Login</h1>
 
-                {/* Success message */}
-                {successMessage && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ duration: 0.5 }}
-                        className="text-green-500 text-center mb-4"
-                    >
-                        {successMessage}
-                    </motion.div>
-                )}
+        {error && <div className="text-red-500 text-center mb-4">{error}</div>}
+        
+        <form onSubmit={handleLogin}>
+          <div className="mb-4">
+            <label htmlFor="email" className="block text-gray-700">Email</label>
+            <input
+              type="email"
+              id="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full p-2 border mt-2"
+              placeholder="Enter your email"
+            />
+          </div>
 
-                {/* Error message */}
-                {errorMessage && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ duration: 0.5 }}
-                        className="text-red-500 text-center mb-4"
-                    >
-                        {errorMessage}
-                    </motion.div>
-                )}
+          <div className="mb-4">
+            <label htmlFor="password" className="block text-gray-700">Password</label>
+            <input
+              type="password"
+              id="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full p-2 border mt-2"
+              placeholder="Enter your password"
+            />
+          </div>
 
-                {/* Loading message */}
-                {isLoading && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ duration: 0.5 }}
-                        className="text-blue-500 text-center mb-4"
-                    >
-                        Connecting...
-                    </motion.div>
-                )}
+          <button
+            type="submit"
+            className="w-full py-2 bg-blue-500 text-white rounded mt-4"
+          >
+            Login
+          </button>
+        </form>
 
-                <motion.form initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5 }} className="space-y-4">
-                    <div>
-                        <label className="block text-gray-700">Email</label>
-                        <input
-                            type="email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
-                            placeholder="admin@gmail.com"
-                            required
-                        />
-                    </div>
-
-                    <div>
-                        <label className="block text-gray-700">Password</label>
-                        <input
-                            type="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
-                            placeholder="Enter your password"
-                            required
-                        />
-                    </div>
-
-                    <button
-                        onClick={handleSubmit}
-                        type="submit" // Ensure it's of type submit
-                        className="w-full bg-blue-500 text-white py-2 rounded-md hover:bg-blue-600 transition"
-                    >
-                        Login
-                    </button>
-                </motion.form>
-            </div>
-        </div>
-    );
+        {isLoggedIn && (
+          <div className="text-green-500 text-center mt-4">
+            Welcome back, Admin!
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
 
 export default AdminLogin;

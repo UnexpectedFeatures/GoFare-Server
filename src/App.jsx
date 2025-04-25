@@ -43,7 +43,7 @@ function Layout() {
       <main className={`flex-grow mt-16 sm:mt-20 md:mt-24 lg:mt-28 ${isAdminSection ? 'mb-20' : ''}`}>
 
         <Routes>
-          <Route path="/" element={<Navigate to="/admin-pannel" />} />
+          <Route path="/" element={<Navigate to="/admin-login" />} />
           <Route path="/admin-login" element={<ProtectedAdminLogin />} />
           <Route path="/transit" element={<VehicleTransit />} />
           <Route path="/user-list" element={<UserList />} />
@@ -78,18 +78,11 @@ function App() {
 }
 
 const ProtectedAdminLogin = () => {
-  return <AdminLogin />;
-};
-const ProtectedRoute = ({ component: Component, adminOnly = false }) => {
-  
-  return <Component />;
-}
-/*const ProtectedAdminLogin = () => {
   const { isLoggedIn } = useContext(AuthContext);
   const userRole = localStorage.getItem("userRole")?.toLowerCase();
 
   if (isLoggedIn && (userRole === "admin" || userRole === "moderator")) {
-    return <Navigate to="/admin-pannel" />;
+    return <Navigate to="/transit" />;
   }
 
   return <AdminLogin />;
@@ -104,16 +97,15 @@ const ProtectedRoute = ({ component: Component, adminOnly = false }) => {
   }
 
   if (adminOnly) {
-    if (userRole === "admin" || userRole === "moderator") {
+    if (userRole === "Admin" || userRole === "Super Admin") {
       return <Component />;
     }
     // Logged-in users without admin/moderator role go to user panel
-    return <Navigate to="/user-pannel" replace />;
+    return <Navigate to="/transit" replace />;
   }
 
   return <Component />;
 };
 
-*/
 
 export default App;
