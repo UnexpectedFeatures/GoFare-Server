@@ -8,10 +8,8 @@ export async function handleUpdateUser(ws, message) {
     const userId = parsed.userId;
     const updatedData = parsed.updatedData;
 
-    if (!userId || !updatedData) {
-      ws.send(
-        "[Update_User_Response] Error: User ID and updated data are required"
-      );
+    if (!userId) {
+      ws.send("[Update_User_Response] Error: User ID is required");
       return;
     }
 
@@ -20,32 +18,38 @@ export async function handleUpdateUser(ws, message) {
     const docSnapshot = await docRef.get();
 
     if (!docSnapshot.exists) {
-      ws.send(
-        `[Update_User_Response] Error: User with userId ${userId} not found`
-      );
+      ws.send(`[Update_User_Response] Error: User with id ${userId} not found`);
       return;
     }
 
+    const authUserData = {
+      ...(updatedData.email && { email: updatedData.email }),
+      ...(updatedData.firstName && updatedData.lastName && {
+        displayName: `${updatedData.firstName} ${updatedData.lastName}`
+      }),
+      ...(updatedData.contactNumber && { phoneNumber: updatedData.contactNumber })
+    };
+    
+
     try {
-      const authUserData = {
-        ...(updatedData.email && { email: updatedData.email }),
-        ...(updatedData.firstName && { displayName: updatedData.firstName }),
-        ...(updatedData.password && { password: updatedData.password }),
-      };
+      const existingUser = await admin.auth().getUser(userId);
+      console.log(`Auth: User ${userId} exists`);
 
       if (Object.keys(authUserData).length > 0) {
         await admin.auth().updateUser(userId, authUserData);
         console.log(`Auth: Updated user ${userId}`);
       }
     } catch (authError) {
-      console.error("Auth Error:", authError.message);
-      ws.send(`[Update_User_Response] Error: ${authError.message}`);
-      return;
+      if (authError.code === 'auth/user-not-found') {
+        console.log(`Auth: User ${userId} not found in Firebase Auth`);
+      } else {
+        console.error("Auth Error:", authError.message);
+        ws.send(`[Update_User_Response] Error: ${authError.message}`);
+        return;
+      }
     }
 
     try {
-      updatedData.updateDate = admin.firestore.FieldValue.serverTimestamp();
-
       await docRef.update(updatedData);
       console.log(`Firestore: Updated document for ${userId}`);
     } catch (dbError) {
@@ -58,5 +62,6 @@ export async function handleUpdateUser(ws, message) {
   } catch (error) {
     console.error("General Error:", error.message);
     ws.send(`[Update_User_Response] Error: ${error.message}`);
+
   }
 }

@@ -35,6 +35,7 @@ export async function handleDeleteAdmin(ws, message) {
       middleName: adminData.middleName || "",
       lastName: adminData.lastName || "",
       password: adminData.password || "",
+      adminLevel: adminData.adminLevel || "",
       deletionDate: utc8Date
     };
 

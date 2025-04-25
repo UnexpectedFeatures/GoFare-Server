@@ -1,7 +1,8 @@
 import admin from "firebase-admin";
 
 function generateUserId() {
-  const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  const characters =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
   let userId = "";
   for (let i = 0; i < 28; i++) {
     const randomIndex = Math.floor(Math.random() * characters.length);
@@ -13,20 +14,15 @@ function generateUserId() {
 export async function handleInsertUser(ws, message) {
   try {
     const cleanedMessage = message.replace("[Insert_User] ", "");
-    const userData = JSON.parse(cleanedMessage);
-
-    console.log("Parsed message:", userData);
+    const parsed = JSON.parse(cleanedMessage);
 
     const userId = generateUserId();
+    const userData = parsed.data;
 
-    console.log("User data:", userData);
-
-    if (!userData || !userData.email) {
-      ws.send("[Insert_User_Response] Error: Email is required");
+    if (!userId || !userData.email) {
+      ws.send("[Insert_User_Response] Error: User ID and email are required");
       return;
     }
-
-    const timestamp = admin.firestore.Timestamp.now(); 
 
     const authUserData = {
       uid: userId,
@@ -37,34 +33,26 @@ export async function handleInsertUser(ws, message) {
       ...(userData.password && { password: userData.password }),
     };
 
-    console.log("Auth user data:", authUserData);
-    console.log("Birthdate:", userData.birthdate);
-    console.log("Birthday:", userData.birthday);
-
     const dbUserData = {
-      address: userData.address || null,
-      age: parseInt(userData.age) || null,
-      birthday: userData.birthdate || null,
-      contactNumber: userData.contactNumber || null,
       email: userData.email,
       firstName: userData.firstName || null,
-      gender: userData.gender || null,
-      lastName: userData.lastName || null,
       middleName: userData.middleName || null,
-      enabled: true,
-      creationDate: timestamp,
-      updateDate: timestamp,
+      lastName: userData.lastName || null,
+      birthday: userData.birthday || null,
+      age: userData.age || null,
+      gender: userData.gender || null,
+      address: userData.address || null,
+      contactNumber: userData.contactNumber || null,
+      enabled: true
     };
-
+    
 
     const firestore = admin.firestore();
     const docRef = firestore.collection("Users").doc(userId);
     const docSnapshot = await docRef.get();
 
-    const isNewUser = !docSnapshot.exists;
-
     try {
-      if (isNewUser) {
+      if (!docSnapshot.exists) {
         await admin.auth().createUser(authUserData);
         console.log(`Auth: Created user ${userId}`);
       } else {
@@ -78,17 +66,16 @@ export async function handleInsertUser(ws, message) {
     }
 
     try {
-      if (isNewUser) {
+      if (!docSnapshot.exists) {
         await docRef.set(dbUserData);
         console.log(`Firestore: Created document for ${userId}`);
       } else {
-        dbUserData.creationDate = docSnapshot.data().creationDate || timestamp; 
         await docRef.update(dbUserData);
         console.log(`Firestore: Updated document for ${userId}`);
       }
     } catch (dbError) {
       console.error("Firestore Error:", dbError.message);
-      if (isNewUser) {
+      if (!docSnapshot.exists) {
         try {
           await admin.auth().deleteUser(userId);
           console.log(`Rollback: Deleted user ${userId}`);
@@ -98,52 +85,6 @@ export async function handleInsertUser(ws, message) {
       }
       ws.send(`[Insert_User_Response] Error: ${dbError.message}`);
       return;
-    }
-
-    if (isNewUser) {
-      try {
-        const userRfidData = {
-          nfc: null,
-          registeredAt: null,
-          renewedAt: null,
-          rfid: null,
-          updateDate: timestamp,
-        };
-        await firestore.collection("UserRFID").doc(userId).set(userRfidData);
-        console.log(`Created UserRfid document for ${userId}`);
-
-        const userPinData = {
-          pin: null,
-          updatedAt: null,
-          updateDate: timestamp,
-        };
-        await firestore.collection("UserPin").doc(userId).set(userPinData);
-        console.log(`Created UserPin document for ${userId}`);
-
-        const userWalletData = {
-          balance: 0,
-          currency: "PHP",
-          loaned: false,
-          loanedAmount: 0,
-          updateDate: timestamp,
-        };
-        await firestore.collection("UserWallet").doc(userId).set(userWalletData);
-        console.log(`Created UserWallet document for ${userId}`);
-      } catch (secondaryCollectionsError) {
-        console.error("Error creating secondary collections:", secondaryCollectionsError.message);
-        try {
-          await admin.auth().deleteUser(userId);
-          await firestore.collection("Users").doc(userId).delete();
-          await firestore.collection("UserRFID").doc(userId).delete();
-          await firestore.collection("UserPin").doc(userId).delete();
-          await firestore.collection("UserWallet").doc(userId).delete();
-          console.log(`Rollback: Deleted user ${userId} and all related documents`);
-        } catch (rollbackError) {
-          console.error("Rollback failed:", rollbackError.message);
-        }
-        ws.send(`[Insert_User_Response] Error: Failed to create secondary collections - ${secondaryCollectionsError.message}`);
-        return;
-      }
     }
 
     ws.send(`[Insert_User_Response] Success: User ${userId} created/updated`);

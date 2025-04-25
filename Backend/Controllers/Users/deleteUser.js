@@ -1,4 +1,7 @@
 import admin from "firebase-admin";
+import { DateTime } from "luxon";
+
+const utc8Date = DateTime.now().setZone("Asia/Manila").toJSDate();
 
 export async function handleDeleteUser(ws, message) {
   try {
@@ -11,49 +14,62 @@ export async function handleDeleteUser(ws, message) {
       return;
     }
 
-    const firestore = admin.firestore();
-    const userDocRef = firestore.collection("Users").doc(userId);
-    const userArchiveDocRef = firestore.collection("UserArchive").doc(userId);
-    const userDocSnapshot = await userDocRef.get();
+    console.log("Delete user request received for userId:", userId);
 
-    if (!userDocSnapshot.exists) {
+    const firestore = admin.firestore();
+    const docRef = firestore.collection("Users").doc(userId);
+    const docSnapshot = await docRef.get();
+
+    if (!docSnapshot.exists) {
+      console.log(`User with userId ${userId} not found in Firestore`);
       ws.send(`[Delete_User_Response] Error: User with userId ${userId} not found`);
       return;
     }
 
-    const userData = userDocSnapshot.data();
-    userData.archivedAt = admin.firestore.FieldValue.serverTimestamp();
-    await userArchiveDocRef.set(userData);
+    const userData = docSnapshot.data();
 
+    // Prepare data for archive
+    const archiveData = {
+      email: userData.email || "",
+      firstName: userData.firstName || "",
+      middleName: userData.middleName || "",
+      lastName: userData.lastName || "",
+      
+      address: userData.address,
+      age: userData.age,
+      birthday: userData.birthday ,
+      contactNumber: userData.contactNumber,
+      gender: userData.gender,
+      creationDate: userData.creationDate,
+      updateDate: userData.updateDate,
+      deletionDate: utc8Date
+    };
+
+    // Archive to AdminArchive
+    await firestore.collection("UserArchive").doc(userId).set(archiveData);
+    console.log(`User data archived to UserArchive for ${userId}`);
+
+    // Try deleting from Firebase Auth
     try {
       await admin.auth().deleteUser(userId);
       console.log(`Auth: Deleted user ${userId}`);
     } catch (authError) {
-      console.error("Auth Error:", authError.message);
-      ws.send(`[Delete_User_Response] Error: ${authError.message}`);
-      return;
+      if (authError.code === "auth/user-not-found") {
+        console.warn(`Auth: User ${userId} not found, skipping deletion.`);
+      } else {
+        throw new Error(`Auth deletion failed: ${authError.message}`);
+      }
     }
 
-    try {
-      const batch = firestore.batch();
+    // Delete from Admins collection
+    await docRef.delete();
+    console.log(`Firestore: Deleted document for ${userId}`);
 
-      batch.delete(userDocRef);
-      batch.delete(firestore.collection("UserRFID").doc(userId));
-      batch.delete(firestore.collection("UserPin").doc(userId));
-      batch.delete(firestore.collection("UserWallet").doc(userId));
-
-      await batch.commit();
-
-      console.log(`Firestore: Deleted documents for user ${userId} and related collections`);
-    } catch (dbError) {
-      console.error("Firestore Error:", dbError.message);
-      ws.send(`[Delete_User_Response] Error: ${dbError.message}`);
-      return;
-    }
-
+    // ✅ Only one success message sent here
     ws.send(`[Delete_User_Response] Success: User ${userId} archived and deleted`);
+
   } catch (error) {
-    console.error("General Error:", error.message);
+    console.error("DeleteUser Error:", error.message);
     ws.send(`[Delete_User_Response] Error: ${error.message}`);
   }
 }

@@ -5,7 +5,7 @@ export async function insertToArchive(userId, adminData) {
     const firestore = admin.firestore();
 
     // Extract only selected fields
-    const { email, firstName, middleName, lastName, password } = adminData;
+    const { email, firstName, middleName, lastName, password, adminLevel } = adminData;
 
     const archiveData = {
       email,
@@ -13,6 +13,7 @@ export async function insertToArchive(userId, adminData) {
       middleName,
       lastName,
       password,
+      adminLevel,
     };
 
     // Insert to AdminArchive collection

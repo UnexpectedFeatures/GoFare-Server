@@ -1,5 +1,5 @@
 import db from "../../database.js";
-import { scanningLogger } from "../../Services/logger.js";
+import { terminal2Logger } from "../../Services/logger.js";
 import { allClients, broadcastToAll } from "../../Websockets/serverSocket1b.js";
 import transporter from "../../Services/mailSender.js";
 import getFormattedGMT8 from "../../Services/dateFormatter.js";
@@ -28,7 +28,7 @@ async function updateGlobalBankConversion(amountGBP) {
     const conversionDoc = await conversionRef.get();
 
     if (!conversionDoc.exists) {
-      scanningLogger.warn("GlobalBank Conversion document not found");
+      terminal2Logger.warn("GlobalBank Conversion document not found");
       await conversionRef.set({
         PHP: 0,
         lastUpdated: getFormattedGMT8(),
@@ -45,13 +45,13 @@ async function updateGlobalBankConversion(amountGBP) {
       lastUpdated: getFormattedGMT8(),
     });
 
-    scanningLogger.info(
-      `Added £${amountGBP.toFixed(
+    terminal2Logger.info(
+      `Added ₱${amountGBP.toFixed(
         2
       )} to PHP value (New total: ₱${newPHPValue.toFixed(2)})`
     );
   } catch (error) {
-    scanningLogger.error(
+    terminal2Logger.error(
       `Failed to update GlobalBank conversion: ${error.message}`
     );
   }
@@ -76,12 +76,51 @@ async function generateTransactionId(userId) {
   return `TX-${nextNum.toString().padStart(4, "0")}`;
 }
 
-async function calculateFare(pickupStop, dropoffStop) {
+async function getActiveEventDiscount() {
   try {
+    const eventsSnapshot = await db.collection("Events").get();
+    let maxDiscount = 0;
+
+    eventsSnapshot.forEach((doc) => {
+      const eventData = doc.data();
+      if (
+        eventData.discountPercentage &&
+        typeof eventData.discountPercentage === "number"
+      ) {
+        maxDiscount = Math.max(maxDiscount, eventData.discountPercentage);
+      }
+    });
+
+    return maxDiscount;
+  } catch (error) {
+    terminal2Logger.error(`Failed to fetch event discounts: ${error.message}`);
+    return 0;
+  }
+}
+
+async function calculateFare(pickupStop, dropoffStop, userId) {
+  try {
+    let hasDiscount = false;
+    let eventDiscount = 0;
+
+    if (userId) {
+      const walletDoc = await db.collection("UserWallet").doc(userId).get();
+      if (walletDoc.exists) {
+        hasDiscount = walletDoc.data().discount || false;
+      }
+
+      eventDiscount = await getActiveEventDiscount();
+    }
+
     const routeDoc = await db.collection("Route").doc("Route1").get();
     if (!routeDoc.exists) {
-      scanningLogger.error("Route document not found");
-      return 0;
+      terminal2Logger.error("Route document not found");
+      return {
+        fare: 0,
+        originalFare: 0,
+        discountApplied: false,
+        discountDetails: [],
+      };
     }
 
     const routeData = routeDoc.data();
@@ -98,15 +137,65 @@ async function calculateFare(pickupStop, dropoffStop) {
     const dropoffIndex = stops.findIndex((stop) => stop === dropoffStop);
 
     if (pickupIndex === -1 || dropoffIndex === -1) {
-      scanningLogger.error(`Invalid stops: ${pickupStop} or ${dropoffStop}`);
-      return 0;
+      terminal2Logger.error(`Invalid stops: ${pickupStop} or ${dropoffStop}`);
+      return {
+        fare: 0,
+        originalFare: 0,
+        discountApplied: false,
+        discountDetails: [],
+      };
     }
 
     const stopsPassed = Math.abs(dropoffIndex - pickupIndex);
-    return 13 + stopsPassed * 10;
+    let fare = 13 + stopsPassed * 10;
+    const originalFare = fare;
+    let discountApplied = false;
+    let discountDetails = [];
+
+    if (hasDiscount) {
+      const discountAmount = fare * 0.1;
+      fare -= discountAmount;
+      discountApplied = true;
+      discountDetails.push({
+        type: "Regular Discount",
+        percentage: 10,
+        amount: discountAmount,
+      });
+    }
+
+    if (eventDiscount > 0) {
+      const discountAmount = originalFare * (eventDiscount / 100);
+      fare -= discountAmount;
+      discountApplied = true;
+      discountDetails.push({
+        type: "Event Discount",
+        percentage: eventDiscount,
+        amount: discountAmount,
+      });
+    }
+
+    if (discountApplied) {
+      terminal2Logger.info(
+        `Applied discounts for user ${userId}: ${JSON.stringify(
+          discountDetails
+        )}`
+      );
+    }
+
+    return {
+      fare,
+      originalFare,
+      discountApplied,
+      discountDetails,
+    };
   } catch (error) {
-    scanningLogger.error(`Failed to calculate fare: ${error.message}`);
-    return 0;
+    terminal2Logger.error(`Failed to calculate fare: ${error.message}`);
+    return {
+      fare: 0,
+      originalFare: 0,
+      discountApplied: false,
+      discountDetails: [],
+    };
   }
 }
 
@@ -126,7 +215,7 @@ async function checkUserLoanStatus(userId) {
       loanedAmount: walletData.loanedAmount || 0,
     };
   } catch (error) {
-    scanningLogger.error(`Failed to check loan status: ${error.message}`);
+    terminal2Logger.error(`Failed to check loan status: ${error.message}`);
     return { hasLoan: false, loanedAmount: 0 };
   }
 }
@@ -174,7 +263,7 @@ async function processPayment(userId, amount) {
       };
     }
   } catch (error) {
-    scanningLogger.error(`Payment processing failed: ${error.message}`);
+    terminal2Logger.error(`Payment processing failed: ${error.message}`);
     return { success: false, error: error.message };
   }
 }
@@ -184,7 +273,9 @@ async function recordTransaction(
   userName,
   assignmentData,
   vehicle,
-  paymentResult
+  paymentResult,
+  originalFare,
+  discountDetails
 ) {
   try {
     const transactionId = await generateTransactionId(userId);
@@ -194,16 +285,23 @@ async function recordTransaction(
 
     await updateGlobalBankConversion(totalAmount);
 
+    const walletDoc = await db.collection("UserWallet").doc(userId).get();
+    const hasDiscount = walletDoc.exists
+      ? walletDoc.data().discount ?? false
+      : false;
+
     const transactionData = {
       currentBalance: paymentResult.remainingBalance,
       dateTime: getFormattedGMT8(),
-      discount: false,
+      discount: hasDiscount,
+      discountDetails: discountDetails,
       dropoff: assignmentData.dropoffStop,
       loaned: paymentResult.loanedAmount > 0,
       loanedAmount: paymentResult.loanedAmount,
       pickup: assignmentData.pickupStop,
       remainingBalance: paymentResult.remainingBalance,
       totalAmount: totalAmount,
+      originalFare: originalFare,
       userName: userName,
       vehicle: vehicle,
       status: "completed",
@@ -217,11 +315,14 @@ async function recordTransaction(
     return {
       transactionId,
       totalAmount,
+      originalFare,
       paymentResult,
+      discountDetails,
+      success: true,
     };
   } catch (error) {
-    scanningLogger.error(`Failed to record transaction: ${error.message}`);
-    return null;
+    terminal2Logger.error(`Failed to record transaction: ${error.message}`);
+    return { success: false, error: error.message };
   }
 }
 
@@ -232,16 +333,20 @@ async function sendDropoffReceipt(
   vehicle,
   transactionId,
   totalAmount,
-  paymentResult
+  paymentResult,
+  originalFare,
+  discountDetails
 ) {
   try {
     const formattedAmount = totalAmount.toFixed(2);
+    const formattedOriginalAmount = originalFare.toFixed(2);
+
     const paymentStatus =
       paymentResult.paymentStatus === "full"
-        ? `FULLY PAID (£${formattedAmount})`
-        : `PARTIALLY PAID (£${paymentResult.amountPaid.toFixed(
+        ? `FULLY PAID (₱${formattedAmount})`
+        : `PARTIALLY PAID (₱${paymentResult.amountPaid.toFixed(
             2
-          )}) - LOAN: £${paymentResult.loanedAmount.toFixed(2)}`;
+          )}) - LOAN: ₱${paymentResult.loanedAmount.toFixed(2)}`;
 
     const dropoffDateTime = new Date(assignmentData.dropoffTime);
     const formattedDate = dropoffDateTime
@@ -259,14 +364,37 @@ async function sendDropoffReceipt(
       })
       .toUpperCase();
 
+    let discountHtml = "";
+    if (discountDetails.length > 0) {
+      discountHtml = `
+        <div style="margin-bottom: 10px;">
+          <div style="color: black; font-size: 12px;">ORIGINAL FARE</div>
+          <div style="font-weight: bold; font-size: 18px; text-decoration: line-through; color: #777;">₱${formattedOriginalAmount}</div>
+        </div>
+      `;
+
+      discountDetails.forEach((discount) => {
+        discountHtml += `
+          <div style="margin-bottom: 10px;">
+            <div style="color: black; font-size: 12px;">${discount.type} (${
+          discount.percentage
+        }%)</div>
+            <div style="font-weight: bold; font-size: 18px; color: #00aa00;">-₱${discount.amount.toFixed(
+              2
+            )}</div>
+          </div>
+        `;
+      });
+    }
+
     const mailOptions = {
       from: process.env.MAIL_USER,
       to: email,
-      subject: `Your ${vehicle.toUpperCase()} Journey Receipt`,
+      subject: `Your GoFare Receipt`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; border: 2px solid #0056b3; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
           <div style="background-color: #0056b3; color: white; padding: 15px; text-align: center;">
-            <h1 style="margin: 0; font-size: 24px; letter-spacing: 1px;">${vehicle.toUpperCase()} JOURNEY RECEIPT</h1>
+            <h1 style="margin: 0; font-size: 24px; letter-spacing: 1px;">GoFare Receipt</h1>
           </div>
           
           <div style="padding: 20px;">
@@ -307,8 +435,8 @@ async function sendDropoffReceipt(
                 <div style="font-weight: bold;">${formattedTime}</div>
               </div>
               <div style="flex: 1; text-align: left;">
-                <div style="color: black; font-size: 12px; margin-bottom: 3px; margin-right: 30px;">SEAT</div>
-                <div style="font-weight: bold;">AA</div>
+                <div style="color: black; font-size: 12px; margin-bottom: 3px; margin-right: 30px;">VEHICLE</div>
+                <div style="font-weight: bold;">B</div>
               </div>
               <div style="flex: 1; text-align: left;">
                 <div style="color: black; font-size: 12px; margin-bottom: 3px;">GATE</div>
@@ -317,9 +445,11 @@ async function sendDropoffReceipt(
             </div>
             
             <div style="border-top: 2px dashed #ccc; padding-top: 15px; text-align: center;">
+              ${discountHtml}
+              
               <div style="margin-bottom: 10px;">
                 <div style="color: black; font-size: 12px;">FARE</div>
-                <div style="font-weight: bold; font-size: 20px; color: #0056b3;">£${formattedAmount}</div>
+                <div style="font-weight: bold; font-size: 20px; color: #0056b3;">₱${formattedAmount}</div>
                 <div style="font-size: 12px; margin-top: 5px; color: ${
                   paymentResult.paymentStatus === "partial"
                     ? "#ff0000"
@@ -359,26 +489,26 @@ async function sendDropoffReceipt(
     };
 
     await transporter.sendMail(mailOptions);
-    scanningLogger.info(`Receipt email sent to ${email}`);
+    terminal2Logger.info(`Receipt email sent to ${email}`);
   } catch (error) {
-    scanningLogger.error(`Failed to send receipt email: ${error.message}`);
+    terminal2Logger.error(`Failed to send receipt email: ${error.message}`);
   }
 }
 
 export async function assignPickupOrDropoff(rfidOrNfc) {
   const timestamp = getFormattedGMT8();
-  scanningLogger.info(`Processing RFID/NFC: ${rfidOrNfc} at ${timestamp}`);
+  terminal2Logger.info(`Processing RFID/NFC: ${rfidOrNfc} at ${timestamp}`);
 
   try {
     const userId = await getUserIdFromRfidOrNfc(rfidOrNfc);
     if (!userId) {
-      scanningLogger.warn(`Unrecognized RFID/NFC: ${rfidOrNfc}`);
+      terminal2Logger.warn(`Unrecognized RFID/NFC: ${rfidOrNfc}`);
       return { status: "USER_NOT_FOUND" };
     }
 
     const userDoc = await db.collection("Users").doc(userId).get();
     if (!userDoc.exists) {
-      scanningLogger.warn(`Missing user document: ${userId}`);
+      terminal2Logger.warn(`Missing user document: ${userId}`);
       return { status: "USER_DOCUMENT_NOT_FOUND" };
     }
 
@@ -388,8 +518,8 @@ export async function assignPickupOrDropoff(rfidOrNfc) {
 
     const { hasLoan, loanedAmount } = await checkUserLoanStatus(userId);
     if (hasLoan) {
-      scanningLogger.warn(
-        `User ${userId} has existing loan of £${loanedAmount}`
+      terminal2Logger.warn(
+        `User ${userId} has existing loan of ₱${loanedAmount}`
       );
       return {
         status: "LOAN_OUTSTANDING",
@@ -404,7 +534,7 @@ export async function assignPickupOrDropoff(rfidOrNfc) {
       .get();
 
     if (!currentTrainDoc.exists || !currentTrainDoc.data().stopName) {
-      scanningLogger.error("Invalid train position data");
+      terminal2Logger.error("Invalid train position data");
       return { status: "TRAIN_POSITION_INVALID" };
     }
 
@@ -424,7 +554,7 @@ export async function assignPickupOrDropoff(rfidOrNfc) {
       const assignmentRef = assignmentsCollection.doc(activeTripDoc.id);
 
       if (activeTrip.vehicle !== currentVehicle) {
-        scanningLogger.warn(
+        terminal2Logger.warn(
           `Vehicle mismatch for ${userName} (${activeTrip.vehicle} vs ${currentVehicle})`
         );
         return {
@@ -457,15 +587,24 @@ export async function assignPickupOrDropoff(rfidOrNfc) {
         action = `DROPOFF_${currentVehicle.toUpperCase()}`;
 
         if (userData.email) {
-          const totalAmount = await calculateFare(
-            activeTrip.pickupStop,
-            stopName
-          );
+          const {
+            fare: totalAmount,
+            originalFare,
+            discountDetails,
+          } = await calculateFare(activeTrip.pickupStop, stopName, userId);
+
+          if (totalAmount <= 0) {
+            terminal2Logger.error(`Invalid fare calculated for user ${userId}`);
+            return {
+              status: "INVALID_FARE",
+              message: "Fare calculation failed",
+            };
+          }
 
           const paymentResult = await processPayment(userId, totalAmount);
 
           if (!paymentResult.success) {
-            scanningLogger.error(`Payment failed for user ${userId}`);
+            terminal2Logger.error(`Payment failed for user ${userId}`);
             return {
               status: "PAYMENT_FAILED",
               message: "Payment processing failed",
@@ -473,14 +612,33 @@ export async function assignPickupOrDropoff(rfidOrNfc) {
             };
           }
 
-          const { transactionId, totalAmount: actualAmount } =
-            await recordTransaction(
-              userId,
-              userName,
-              { ...activeTrip, ...assignmentData },
-              currentVehicle,
-              paymentResult
+          const transactionResult = await recordTransaction(
+            userId,
+            userName,
+            { ...activeTrip, ...assignmentData },
+            currentVehicle,
+            paymentResult,
+            originalFare,
+            discountDetails
+          );
+
+          if (!transactionResult.success) {
+            terminal2Logger.error(
+              `Transaction recording failed for user ${userId}: ${transactionResult.error}`
             );
+            return {
+              status: "TRANSACTION_FAILED",
+              message: "Failed to record transaction",
+              error: transactionResult.error,
+            };
+          }
+
+          const {
+            transactionId,
+            totalAmount: actualAmount,
+            originalFare: actualOriginalFare,
+            discountDetails: actualDiscountDetails,
+          } = transactionResult;
 
           await sendDropoffReceipt(
             userData.email,
@@ -489,7 +647,9 @@ export async function assignPickupOrDropoff(rfidOrNfc) {
             currentVehicle,
             transactionId,
             actualAmount,
-            paymentResult
+            paymentResult,
+            actualOriginalFare,
+            actualDiscountDetails
           );
         }
       }
@@ -538,7 +698,9 @@ export async function assignPickupOrDropoff(rfidOrNfc) {
         .get();
 
       if (completedATrip.empty) {
-        scanningLogger.warn(`User ${userName} needs completed A trip before B`);
+        terminal2Logger.warn(
+          `User ${userName} needs completed A trip before B`
+        );
         return { status: "VEHICLE_A_REQUIRED_FIRST" };
       }
     }
@@ -591,7 +753,7 @@ export async function assignPickupOrDropoff(rfidOrNfc) {
       vehicle: currentVehicle,
     };
   } catch (error) {
-    scanningLogger.error(`Processing error: ${error.message}`, {
+    terminal2Logger.error(`Processing error: ${error.message}`, {
       stack: error.stack,
     });
     throw error;

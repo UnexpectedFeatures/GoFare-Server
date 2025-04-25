@@ -18,7 +18,7 @@ export const handleRetrieveAdmin = async (ws, message) => {
       return;
     }
 
-    const { email, firstName, middleName, lastName, password } = archiveSnapshot.data();
+    const { email, firstName, middleName, lastName, password, adminLevel } = archiveSnapshot.data();
 
     const newAdmin = {
       email,
@@ -26,6 +26,7 @@ export const handleRetrieveAdmin = async (ws, message) => {
       middleName,
       lastName,
       password,
+      adminLevel,
       enabled: true
     };
 

@@ -1,20 +1,20 @@
 import db from "../../database.js";
 
-export const handleFetchUsers = async (ws, message) => {
+export const handleFetchArchiveUsers = async (ws, message) => {
   try {
     console.log("Fetching Users from Firestore...");
 
-    const UsersSnapshot = await db.collection("Users").get();
+    const UsersSnapshot = await db.collection("UserArchive").get();
     const Users = [];
 
     UsersSnapshot.forEach((doc) => {
-      const { creationDate, updateDate, ...rest } = doc.data();
       const userData = {
-        id: doc.id,
-        ...rest
+        id: doc.id, 
+        ...doc.data(),
       };
 
       console.log("User data:", userData);
+
       Users.push(userData);
     });
 
@@ -24,10 +24,8 @@ export const handleFetchUsers = async (ws, message) => {
       timestamp: new Date().toISOString(),
     };
 
-    // Log the data being sent
-    console.log("Sending data:", JSON.stringify(Users)); // Ensure the data is correct
     if (ws.readyState === ws.OPEN) {
-      ws.send(`[Users_Data] ${JSON.stringify(Users)}`);
+      ws.send(`[Users_Archive] ${JSON.stringify(Users)}`);
     } else {
       console.error("WebSocket not open, cannot send Users data");
     }

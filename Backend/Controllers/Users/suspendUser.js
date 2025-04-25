@@ -1,25 +1,25 @@
 import admin from "firebase-admin";
 
-export async function handleSuspendAdmin(ws, message) {
+export async function handleSuspendUser(ws, message) {
     try {
-      const cleanedMessage = message.replace("[Suspend_Admin] ", "");
+      const cleanedMessage = message.replace("[Suspend_User] ", "");
       const parsed = JSON.parse(cleanedMessage);
   
       const userId = parsed.userId;
       const enabled = parsed.enabled;
   
       if (!userId || typeof enabled !== "boolean") {
-        ws.send("[Suspend_Admin_Response] Error: userId and enabled flag are required");
+        ws.send("[Suspend_User_Response] Error: userId and enabled flag are required");
         return;
       }
   
       const firestore = admin.firestore();
-      const docRef = firestore.collection("Admins").doc(userId);
+      const docRef = firestore.collection("Users").doc(userId);
   
       // Check if exists
       const docSnapshot = await docRef.get();
       if (!docSnapshot.exists) {
-        ws.send(`[Suspend_Admin_Response] Error: Admin with id ${userId} not found`);
+        ws.send(`[Suspend_User_Response] Error: User with id ${userId} not found`);
         return;
       }
   
@@ -35,10 +35,10 @@ export async function handleSuspendAdmin(ws, message) {
       // Firestore
       await docRef.update({ enabled });
   
-      ws.send(`[Suspend_Admin_Response] Success: Admin ${userId} is now ${enabled ? "enabled" : "disabled"}`);
+      ws.send(`[Suspend_User_Response] Success: User ${userId} is now ${enabled ? "enabled" : "disabled"}`);
     } catch (error) {
       console.error("Toggle Enabled Error:", error.message);
-      ws.send(`[Suspend_Admin_Response] Error: ${error.message}`);
+      ws.send(`[Suspend_User_Response] Error: ${error.message}`);
     }
   }
   
