@@ -68,6 +68,7 @@ To run this project locally, ensure you have the following installed:
 
 - Frontend: Android Studio, VisualBasic, React JS
 - Backend: Node JS, Websockets
+- Database: Firebase
 - Hardware: Esp32 & MFRCC 522
 
 ## LICENSE
