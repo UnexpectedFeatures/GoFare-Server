@@ -64,6 +64,12 @@ To run this project locally, ensure you have the following installed:
 - API endpoints for commuter registration, card binding, and payment history
 - Seamless integration with external systems (e.g., payment gateways or transport terminals)
 
+## TECHNOLOGIES USED
+
+- Frontend: Android Studio, VisualBasic, React JS
+- Backend: Node JS, Websockets
+- Hardware: Esp32 & MFRCC 522
+
 ## LICENSE
 
 See the LICENSE file for more information.
