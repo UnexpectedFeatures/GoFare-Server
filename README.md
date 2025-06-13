@@ -1,18 +1,38 @@
 # GoFare Infrastructure Server
 
-Backend Server for the GoFare Application
+> Backend Server for the GoFare Application
 
-"The GoFare Application simplifies fare reloading with secure transactions, real-time balance updates, and automated receipts.
-By enhancing convenience for commuters and optimizing efficiency for transport operators, it modernizes fare payment and
-management in the transportation system."
+![JavaScript](https://img.shields.io/badge/JavaScript-ES6-yellow?logo=javascript&logoColor=black)
+![Node.js](https://img.shields.io/badge/Node.js-339933?logo=nodedotjs&logoColor=white)
+![Arduino](https://img.shields.io/badge/Arduino-00979D?logo=arduino&logoColor=white)
+![ESP32](https://img.shields.io/badge/ESP32-Microcontroller-blue)
+![MySQL](https://img.shields.io/badge/MySQL-4479A1?logo=mysql&logoColor=white)
+![MSSQL](https://img.shields.io/badge/MSSQL-CC2927?logo=microsoftsqlserver&logoColor=white)
+![Firebase](https://img.shields.io/badge/Firebase-FFCA28?logo=firebase&logoColor=black)
+![Android Studio](https://img.shields.io/badge/Android%20Studio-3DDC84?logo=androidstudio&logoColor=white)
+![React](https://img.shields.io/badge/React-61DAFB?logo=react&logoColor=black)
 
-## ABOUT
+---
+
+## About
 
 This server is the core infrastructure behind the GoFare Application — a modern fare management system built to serve
 transportation networks with speed, reliability, and security.
 
 It provides APIs for fare reloading, real-time balance updates, NFC/RFID card authentication, and receipt generation,
 all while ensuring smooth integration with client-side mobile and kiosk applications.
+
+---
+
+## Table of Contents
+
+- [Requirements](#requirements)
+- [Features](#features)
+- [Installation](#installation)
+- [Technologies Used](#technologies-used)
+- [License](#license)
+
+---
 
 ## REQUIREMENTS
 
@@ -25,36 +45,9 @@ To run this project locally, ensure you have the following installed:
 - RFID/NFC Reader compatible with your kiosk setup
 - Any Database Access (This is built with Firebase)
 
-## INSTALLATION
+---
 
-1. Clone the Repository:
-   git clone https://github.com/JohnIvn/GoFare-Server.git
-   cd gofare-server
-
-2. Install Dependencies:
-   npm install
-   OR
-   yarn install
-
-3. Configure Environment:
-   Create a .env file in the root directory and add your configuration:
-
-4. Run the hardware:
-   Connect the server as the same wifi as the Esp32/Arduino R4 and connect the MFRCC 522 (Or any other scanning module) module to the circuit.
-
-   The arduino script is inside Hardware/rfid_scanner.
-
-5. Run the Development Server:
-
-   4a. Backend
-   npm run backend
-   OR
-   yarn backend
-
-6. Access the Application (Locally):
-   Open your browser and go to:
-
-## FEATURES
+## Features
 
 - Secure fare reloading through web, kiosk, or mobile interfaces
 - Real-time NFC/RFID card balance tracking and updates
@@ -63,17 +56,92 @@ To run this project locally, ensure you have the following installed:
 - API endpoints for commuter registration, card binding, and payment history
 - Seamless integration with external systems (e.g., payment gateways or transport terminals)
 
-## TECHNOLOGIES USED
+---
 
-- Frontend: Android Studio, VisualBasic, React JS
-- Backend: Node JS, Websockets
-- Database: Firebase
-- Hardware: Esp32 & MFRCC 522
+## Installation
 
-## LICENSE
+### 1. Clone the Repository
 
-See the LICENSE file for more information.
+```bash
+git clone https://github.com/JohnIvn/GoFare-Server.git
+```
+
+### 2. Install Dependencies
+
+```bash
+cd backend
+npm install
+```
+
+### 3. Configure Environment
+Create a .env file in the root directory and add your configuration:
+```bash
+WS_PORT=
+WS_PORT_2=
+WS_PORT_3=
+
+MAIL_USER=
+MAIL_PASS=
+```
+Export your firebase service account and rename it:
+
+```bash
+key.json
+```
+### 4. Wiring Diagram
+
+| MFRC522 Pin | ESP32 Pin          |
+| ----------- | ------------------ |
+| SDA         | 5                  |
+| SCK         | 18                 |
+| MOSI        | 23                 |
+| MISO        | 19                 |
+| IRQ         | Not connected      |
+| GND         | GND                |
+| RST         | 4                  |
+| 3.3V        | 3.3V (**not 5V!**) |
+
+### 5. Run the hardware
+
+The arduino script is inside Hardware/rfid_scanner.
+
+### 6. Run the server
+
+```bash
+   cd backend
+```
+
+npm
+```bash
+   npm run backend
+```
+yarn
+```bash
+   yarn backend
+```
+---
+
+## Technologies-Used
+
+| Category | Tools                                   |
+| -------- | --------------------------------------- |
+| Frontend | Android Studio, Visual Basic & React JS |
+| Backend  | Node JS & Websockets                    |
+| Database | Firebase, MYSQL & MSSQL                 |
+| Hardware | Esp 32, Arduino UNO R3 & RC522          |
 
 ---
 
-GoFare Server — powering smarter fare systems for a seamless commute.
+## Testing
+
+Once everything is set up and the server is running, you can test simply by going to the url.
+
+---
+
+## License
+
+See the [LICENSE](LICENSE) file for more information.
+
+---
+
+> Built with ❤️ by JohnIvn
