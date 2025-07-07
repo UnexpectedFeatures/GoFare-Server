@@ -28,13 +28,15 @@ all while ensuring smooth integration with client-side mobile and kiosk applicat
 
 - [Requirements](#requirements)
 - [Features](#features)
+- [Release](#release)
 - [Installation](#installation)
+- [Structure](#structure)
 - [Technologies Used](#technologies-used)
 - [License](#license)
 
 ---
 
-## REQUIREMENTS
+## Requirements
 
 To run this project locally, ensure you have the following installed:
 
@@ -55,6 +57,12 @@ To run this project locally, ensure you have the following installed:
 - Role-based user access (commuter, operator, admin)
 - API endpoints for commuter registration, card binding, and payment history
 - Seamless integration with external systems (e.g., payment gateways or transport terminals)
+
+---
+
+## Release
+
+- Alternatively you can download the `.zip` file from the [Releases](https://github.com/UnexpectedFeatures/GoFare-Server/releases/) section.
 
 ---
 
@@ -119,6 +127,33 @@ yarn
 ```bash
    yarn backend
 ```
+---
+
+## Structure
+
+```bash
+/
+├── Backend/
+│   ├── Controllers/
+│   │   ├── Admins/
+│   │   ├── Discounts/
+│   │   ├── Drivers/
+│   │   ├── Events/
+│   │   ├── RFID-NFC/
+│   │   ├── Refund/
+│   │   ├── Requests/
+│   │   ├── Stripe/
+│   │   ├── Users/
+│   │   ├── VehicleA/
+│   │   └── VehicleB/
+│   ├── Routes/
+│   ├── Services/
+│   ├── Tesseract/
+│   └── Websockets/                     
+└── Hardware/
+    └── rfid_scanner/              
+```
+
 ---
 
 ## Technologies-Used
